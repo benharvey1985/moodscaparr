@@ -128,4 +128,4 @@ docker compose up -d
 
 ## Project Status
 
-v0.1.0 — All core features implemented. Docker deployment milestone in progress.
+v1.1.0 — All core features implemented. Docker deployment complete — self-host with `docker compose up`.

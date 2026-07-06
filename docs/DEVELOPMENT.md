@@ -36,16 +36,27 @@ The app will be available at `http://localhost:3000`.
 ## Code Style
 
 - **ESLint** — configured in `eslint.config.mjs`. Uses `eslint-config-next` with TypeScript support. Run with `npm run lint`
-- **EditorConfig** — no `.editorconfig` found. Standard Next.js conventions apply
-- **TypeScript** — strict mode configured in `tsconfig.json`. All source files are `.ts` or `.tsx`
+- **TypeScript** — strict mode, target ES2017, configured in `tsconfig.json`. All source files are `.ts` or `.tsx`
 - **Tailwind v4** — CSS utility framework with `tw-animate-css` for animations. Configured in `postcss.config.mjs` and `globals.css`
-- **shadcn/ui** — component library using Radix UI primitives. Component definitions in `components.json`
+- **shadcn/ui** **(base-nova style)** — component library using Radix UI primitives. Component definitions in `components.json`
 
 ## Branch Conventions
 
 No branch naming convention is documented. The default branch is `main`.
 
 ## PR Process
+
+## Docker Build
+
+To build and test the Docker image locally:
+
+```bash
+docker compose build
+docker compose up -d
+# Access at http://localhost:8080
+```
+
+The Dockerfile uses a three-stage multi-stage build (deps → builder → runner) with Alpine base. The `output: "standalone"` option in `next.config.ts` enables the Next.js standalone output mode, producing a minimal production image (~300-400 MB).
 
 No pull request template or automation has been configured. When submitting changes:
 

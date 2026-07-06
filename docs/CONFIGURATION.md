@@ -6,10 +6,10 @@
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `DATABASE_URL` | Yes | — | PostgreSQL connection string used by Prisma at runtime. Example: `postgresql://user:password@localhost:5432/moodscaparr` |
-| `DIRECT_URL` | Yes | — | PostgreSQL connection string used by Prisma for migrations (defined in `prisma.config.ts`). Can be the same as `DATABASE_URL` |
+| `DATABASE_URL` | Yes | — | PostgreSQL connection string used by Prisma at runtime. Development: `postgresql://user:password@localhost:5432/moodscaparr`. Docker: `postgresql://moodscaparr:change-me-in-production@db:5432/moodscaparr` |
+| `DIRECT_URL` | Yes | — | PostgreSQL connection string used by Prisma for migrations (defined in `prisma.config.ts`). Same as `DATABASE_URL` when no connection pooler is in use |
 | `BETTER_AUTH_SECRET` | Yes | — | Secret key for signing auth session cookies. Generate with `openssl rand -hex 32` |
-| `BETTER_AUTH_URL` | Yes | — | Base URL of the app. Example: `http://localhost:3000` for development |
+| `BETTER_AUTH_URL` | Yes | — | Base URL of the app. Development: `http://localhost:3000`. Docker: `http://localhost:8080` |
 | `NEXT_PUBLIC_GITHUB_REPO` | No | — | GitHub repo path for the feedback feature. Example: `user/moodscaparr`. Feedback creates GitHub issues |
 | `NODE_ENV` | No | `development` | Controls secure cookie usage (`production` enables `secure` + `httpOnly` cookies) and Prisma client caching |
 
@@ -40,6 +40,6 @@ The project follows the standard Next.js environment convention:
 - **`.env.example`** — Template file documenting all environment variables with placeholder values. Commit-safe — contains no secrets
 - **`.env.local`** — Local development environment variables. Gitignored — do not commit
 - **`prisma.config.ts`** — Prisma 7 configuration (schema path, datasource URL via `DIRECT_URL`, seed command)
-- **`next.config.ts`** — Next.js configuration (Content-Security-Policy headers). No `output: "standalone"` currently set — will be added for Docker deployment
+- **`next.config.ts`** — Next.js configuration (Content-Security-Policy headers, `output: "standalone"` for Docker builds)
 
 <!-- VERIFY: Production deployment environment variable values must be set in the deployment platform's secret manager -->

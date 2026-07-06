@@ -11,7 +11,7 @@ Moodscaparr is a single-page web application built with Next.js 16 (App Router) 
 A typical request follows this path:
 
 1. **Browser** → sends HTTP request to Next.js server
-2. **Next.js middleware** (`middleware.ts`) → checks session auth, redirects unauthenticated users to `/auth/login`, enforces admin role for `/admin/*` routes, sets security headers
+2. **Next.js middleware** (`middleware.ts`) → checks session auth, redirects unauthenticated users to `/auth/login`, enforces admin role for `/admin/*` routes, sets security headers. Middleware matcher excludes `/api/health` for unauthenticated health checks
 3. **Next.js App Router** → renders the matching page (SSR or client-side)
 4. **Client component** → fetches data via TanStack Query hooks (`hooks/use-*.ts`) which call API routes at `app/api/*`
 5. **API route** → reads/writes to PostgreSQL via Prisma client (`lib/prisma.ts`), returns JSON
@@ -66,7 +66,7 @@ graph TD
 
 ```
 app/              — Next.js App Router pages and API routes
-  api/              — REST API route handlers (achievements, admin, analytics, auth, mood-entries, etc.)
+  api/              — REST API route handlers (health, achievements, admin, analytics, auth, mood-entries, etc.)
   auth/             — Login, register, password reset pages
   dashboard/        — Main dashboard page
   wizard/           — Mood logging wizard

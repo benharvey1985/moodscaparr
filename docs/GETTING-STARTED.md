@@ -4,10 +4,10 @@
 
 ## Prerequisites
 
-- **Node.js** — version 18.17 or later (Next.js 16 requirement)
+- **Node.js** — version 22.x or later (Docker image uses Node.js 22)
 - **npm** — included with Node.js
 - **PostgreSQL 16** — running locally or via Docker. The app connects to a Postgres database at the URL specified in `DATABASE_URL`
-- **Docker** (optional) — for running with `docker compose up`
+- **Docker** (optional) — for running with `docker compose up` without installing Node.js locally
 
 ## Installation
 

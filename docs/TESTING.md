@@ -4,7 +4,7 @@
 
 ## Test Framework and Setup
 
-No test framework is currently configured in `package.json`. The project does not have any test runner (Jest, Vitest, Playwright, etc.) in its dependencies. There are no test files in the repository.
+No test framework is currently configured in `package.json`. The project does not have any test runner (Jest, Vitest, Playwright, etc.) in its dependencies or devDependencies. There are no test files in the repository.
 
 To add testing, a framework needs to be installed and configured. Suggested approach:
 
