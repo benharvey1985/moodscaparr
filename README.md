@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<!-- generated-by: gsd-doc-writer -->
+
+# Moodscaparr
+
+A daily mood diary web app. Log how you feel each day with optional context, then visualize your emotional patterns through charts, a calendar heatmap, achievements, and streak tracking.
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+# Install dependencies
+npm install
+
+# Set up your environment
+cp .env.example .env
+# Edit .env with your database URL and auth secret
+
+# Set up the database
+npx prisma migrate dev
+
+# Start the dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to see the app. The first user to register will be auto-assigned the admin role.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Quick Start with Docker
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+docker compose up -d
+# Visit http://localhost:8080
+```
 
-## Learn More
+## Features
 
-To learn more about Next.js, take a look at the following resources:
+- **Mood logging** — 3-step wizard with mood picker, context (activities, weather, sleep, energy, stress), and reflection prompts
+- **Quick Log** — log a mood in 3 taps from the dashboard with sensible defaults
+- **Dashboard** — time-aware greeting, today's status, KPI cards, recent entries, streak progress
+- **Entry history** — browse, search, filter, and export entries as CSV
+- **Calendar heatmap** — color-coded days showing mood intensity and category
+- **Analytics** — overview KPIs, mood trends, day-of-week patterns, activity correlations, wellbeing stats, reflections
+- **Achievements** — 14 badges across milestone, streak, exploration, and special categories with confetti animations
+- **Admin panel** — user management, SSO provider config, invite codes, dashboard KPIs
+- **Dark mode** — light/dark/system theme toggle
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Tech Stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Layer | Choice |
+|-------|--------|
+| Framework | Next.js 16 + React 19 |
+| Language | TypeScript |
+| Database | PostgreSQL 16 |
+| ORM | Prisma 7 |
+| Auth | Better Auth 1.6 |
+| CSS | Tailwind v4 + shadcn/ui |
+| State | TanStack Query 5 |
+| Forms | react-hook-form + Zod 4 |
+| Charts | recharts |
+| Deployment | Docker Compose |
 
-## Deploy on Vercel
+## Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run start` | Start production server |
+| `npm run lint` | Run ESLint |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Project Status
+
+v0.1.0 — All core features implemented. Docker deployment milestone in progress.
