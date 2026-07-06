@@ -1,0 +1,28 @@
+# Dependencies
+node_modules
+
+# Build output
+.next
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Version control
+.git
+.gitignore
+
+# Project planning
+.planning
+
+# IDE
+.idea
+.vscode
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
