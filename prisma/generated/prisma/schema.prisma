@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model user {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  role          String    @default("user")
+  banned        Boolean   @default(false)
+  banReason     String?
+  banExpires    DateTime?
+
+  sessions     session[]
+  accounts     account[]
+  moodEntries  MoodEntry[]
+  achievements Achievement[]
+  profile      UserProfile?
+}
+
+model session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model account {
+  id                    String    @id @default(cuid())
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+enum MoodCategory {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+model MoodEntry {
+  id           String       @id @default(cuid())
+  userId       String
+  category     MoodCategory
+  moodIndex    Int
+  intensity    Int
+  date         DateTime
+  activities   String[]
+  weather      String?
+  sleepHours   Float?
+  sleepQuality String?
+  energyLevel  Int?
+  stressLevel  Int?
+  reflection1  String?
+  reflection2  String?
+  reflection3  String?
+  reflection4  String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@index([userId, category])
+}
+
+model UserProfile {
+  id                 String  @id
+  name               String?
+  country            String?
+  timezone           String  @default("UTC")
+  streakGoal         Int     @default(7)
+  onboardingComplete Boolean @default(false)
+
+  user user @relation(fields: [id], references: [id], onDelete: Cascade)
+}
+
+model SsoProvider {
+  id           String  @id @default(cuid())
+  provider     String  @unique
+  enabled      Boolean @default(false)
+  clientId     String?
+  clientSecret String?
+}
+
+model InviteCode {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  maxUses   Int
+  uses      Int      @default(0)
+  expiresAt DateTime
+  createdBy String
+  active    Boolean  @default(true)
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  userId      String
+  badgeId     String
+  unlockedAt  DateTime @default(now())
+  progress    Int      @default(0)
+  maxProgress Int      @default(1)
+
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+}
