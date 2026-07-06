@@ -34,14 +34,23 @@ Make mood tracking effortless enough to do daily, rewarding enough to sustain as
 - ✓ All mood visual elements unified via CSS custom property tokens (v1.0)
 - ✓ Light/dark/system theme, onboarding tour, feedback system (v1.0)
 
-### Active
+### Validated
 
-<!-- Current scope — building toward these. -->
-
-- [ ] Dockerfile for the Next.js app (multi-stage build)
-- [ ] docker-compose.yml with app + Postgres 16 + persistent volumes
-- [ ] Environment variable configuration (.env.example)
-- [ ] README updated with Docker installation / self-hosting guide
+- ✓ User can register and log in with email/password (v1.0)
+- ✓ User can log mood via 3-step wizard, quick-log, edit/delete entries (v1.0)
+- ✓ Dashboard with KPI cards, streak progress, recent entries (v1.0)
+- ✓ Entry history with search, filter, CSV export (v1.0)
+- ✓ Calendar heatmap with color-coded cells (v1.0)
+- ✓ Analytics with overview, trends, reflections, PDF report (v1.0)
+- ✓ 14 achievement badges with confetti/toast unlock (v1.0)
+- ✓ User profile/settings with data export/import (v1.0)
+- ✓ Admin panel with KPIs, user management, SSO, invite codes (v1.0)
+- ✓ All mood visual elements unified via CSS custom property tokens (v1.0)
+- ✓ Light/dark/system theme, onboarding tour, feedback system (v1.0)
+- ✓ Dockerfile for the Next.js app (multi-stage build) (v1.1)
+- ✓ docker-compose.yml with app + Postgres 16 + persistent volumes (v1.1)
+- ✓ Environment variable configuration (.env.example) (v1.1)
+- ✓ README updated with Docker installation / self-hosting guide (v1.1)
 
 ### Out of Scope
 
@@ -52,14 +61,14 @@ Make mood tracking effortless enough to do daily, rewarding enough to sustain as
 
 ## Context
 
-Moodscaparr v1.0 shipped all 3 MVP phases. 33 routes, auth, mood diary, dashboard, history, analytics, achievements, admin panel — all built and working. The app currently requires a Postgres database running outside the app (Docker container `moodscaper-db` at localhost:5432). This milestone containers the app itself so anyone can self-host with a single command.
+Moodscaparr v1.1 shipped all 4 phases. 33 routes, auth, mood diary, dashboard, history, analytics, achievements, admin panel, and full Docker deployment stack — all built and working. The app now ships with a Dockerfile (multi-stage, Alpine, non-root), docker-compose.yml (app + postgres:16-alpine with named volume), entrypoint with auto-migrations, health endpoint, and comprehensive README. Anyone can self-host with `docker compose up`.
 
 ## Constraints
 
 - **Visual Unification**: Every mood category color, card rounding, and mood selector button must be identical across every screen (non-negotiable per brief)
 - **Dev Owns Architecture**: Stack choice, persistence, design interpretation, and component library are developer's choice
 - **First user is admin**: Role-based access with auto-admin for first registered user
-- **Keep adapter-pg**: Postgres runs inside the compose stack — no Neon/cloud adapter needed
+- **Keep adapter-pg** (✓ resolved): Postgres runs inside the compose stack via docker-compose.yml
 
 ## Key Decisions
 
@@ -67,7 +76,7 @@ Moodscaparr v1.0 shipped all 3 MVP phases. 33 routes, auth, mood diary, dashboar
 |----------|-----------|---------|
 | Greenfield project | No existing codebase | ✓ Good |
 | Responsive web first | Cross-platform reach without native overhead | — Pending |
-| Docker self-hosting (v1.1) | Users deploy via `docker compose up` — simple, portable, locally hostable | — Pending |
+| Docker self-hosting (v1.1) | Users deploy via `docker compose up` — simple, portable, locally hostable | ✓ Shipped |
 
 ## Evolution
 
@@ -87,4 +96,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-06 after v1.1 milestone start*
+*Last updated: 2026-07-06 after Phase 4 execution*

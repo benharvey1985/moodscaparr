@@ -84,7 +84,7 @@ Plans:
 **UI hint**: no
 
 Plans:
-- [ ] 04-01-PLAN.md — Docker Deployment (Dockerfile, compose, entrypoint, health endpoint, docs)
+- [x] 04-01-PLAN.md — Docker Deployment (Dockerfile, compose, entrypoint, health endpoint, docs)
 
 ## Progress
 
@@ -93,4 +93,4 @@ Plans:
 | 1. Foundation & Core Diary | 3/3 | Complete | 2026-07-06 |
 | 2. Dashboard, History & Insights | 4/4 | Complete | 2026-07-06 |
 | 3. Gamification, Profile & Admin | 2/2 | Complete | 2026-07-06 |
-| 4. Docker Deployment | 0/1 | Not started | — |
+| 4. Docker Deployment | 1/1 | Complete | 2026-07-06 |
