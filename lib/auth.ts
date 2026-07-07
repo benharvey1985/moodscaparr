@@ -24,6 +24,23 @@ export const auth = betterAuth({
           if (adminCount === 0) {
             return { data: { ...user, role: "admin" } }
           }
+
+          const setting = await prisma.appSetting.findUnique({
+            where: { key: "invite_only" },
+          })
+
+          if (setting?.value === "true" && user.email) {
+            const consumption = await prisma.inviteConsumption.findUnique({
+              where: { email: user.email },
+            })
+            if (!consumption) {
+              return false
+            }
+            await prisma.inviteConsumption.delete({
+              where: { id: consumption.id },
+            })
+          }
+
           return { data: user }
         },
       },

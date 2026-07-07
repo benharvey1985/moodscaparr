@@ -126,3 +126,25 @@ export async function revokeInviteCode(id: string): Promise<void> {
   })
   if (!res.ok) throw new Error("Failed to revoke invite code")
 }
+
+export interface AppSettingData {
+  key: string
+  value: string | null
+}
+
+export async function fetchSetting(key: string): Promise<AppSettingData> {
+  const res = await fetch(`/api/admin/settings/${key}`, { credentials: "include" })
+  if (!res.ok) throw new Error("Failed to fetch setting")
+  return res.json()
+}
+
+export async function updateSetting(key: string, value: string): Promise<AppSettingData> {
+  const res = await fetch(`/api/admin/settings/${key}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ value }),
+  })
+  if (!res.ok) throw new Error("Failed to update setting")
+  return res.json()
+}

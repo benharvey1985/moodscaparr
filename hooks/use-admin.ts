@@ -11,6 +11,8 @@ import {
   fetchInviteCodes,
   generateInviteCode,
   revokeInviteCode,
+  fetchSetting,
+  updateSetting,
 } from "@/lib/api/admin"
 import type {
   AdminUserList,
@@ -92,6 +94,23 @@ export function useAdminMutations() {
     generateInviteCode: generateInviteMutation,
     revokeInviteCode: revokeInviteMutation,
   }
+}
+
+export function useSetting(key: string) {
+  return useQuery({
+    queryKey: ["admin", "settings", key],
+    queryFn: () => fetchSetting(key),
+  })
+}
+
+export function useUpdateSetting() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ key, value }: { key: string; value: string }) => updateSetting(key, value),
+    onSuccess: (_data, { key }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "settings", key] })
+    },
+  })
 }
 
 export function useSSOConfig() {

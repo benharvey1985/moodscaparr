@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
@@ -17,6 +17,7 @@ const schema = z.object({
   email: z.string().email("Please enter a valid email"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   confirmPassword: z.string(),
+  inviteCode: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
@@ -28,15 +29,46 @@ function RegisterForm() {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [inviteOnly, setInviteOnly] = useState(false)
+  const [checkingStatus, setCheckingStatus] = useState(true)
 
-  const { register, handleSubmit, formState: { errors }, setError: setFormError } = useForm<Schema>({
-    resolver: zodResolver(schema),
-    defaultValues: { name: "", email: "", password: "", confirmPassword: "" },
+  useEffect(() => {
+    fetch("/api/auth/invite-status")
+      .then((r) => r.json())
+      .then((data) => setInviteOnly(data.inviteOnly))
+      .catch(() => setInviteOnly(false))
+      .finally(() => setCheckingStatus(false))
+  }, [])
+
+  const { register, handleSubmit, formState: { errors }, setError: setFormError, watch } = useForm<Schema>({
+    resolver: zodResolver(
+      inviteOnly
+        ? schema.extend({
+            inviteCode: z.string().min(1, "Invite code is required"),
+          })
+        : schema
+    ),
+    defaultValues: { name: "", email: "", password: "", confirmPassword: "", inviteCode: "" },
   })
 
   async function onSubmit(data: Schema) {
     setLoading(true)
     setError(null)
+
+    if (inviteOnly && data.inviteCode) {
+      const res = await fetch("/api/auth/validate-invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: data.inviteCode, email: data.email }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        setFormError("root", { message: err.error || "Invalid invite code" })
+        setLoading(false)
+        return
+      }
+    }
 
     const { error: authError } = await authClient.signUp.email({
       email: data.email,
@@ -54,8 +86,26 @@ function RegisterForm() {
     router.push("/dashboard")
   }
 
+  if (checkingStatus) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      </div>
+    )
+  }
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      {inviteOnly && (
+        <div className="space-y-2">
+          <Label htmlFor="inviteCode">Invite Code</Label>
+          <Input id="inviteCode" {...register("inviteCode")} placeholder="Enter your invite code" />
+          {errors.inviteCode && (
+            <p className="text-sm text-red-500">{errors.inviteCode.message}</p>
+          )}
+        </div>
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="name">Name</Label>
         <Input id="name" {...register("name")} />

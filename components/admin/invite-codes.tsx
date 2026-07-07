@@ -1,19 +1,22 @@
 "use client"
 
 import { useState } from "react"
-import { useInviteCodes, useAdminMutations } from "@/hooks/use-admin"
+import { useInviteCodes, useAdminMutations, useSetting, useUpdateSetting } from "@/hooks/use-admin"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
 import { useToast } from "@/components/ui/toaster"
-import { Copy, Trash2, Plus } from "lucide-react"
+import { Copy, Trash2, Plus, ShieldCheck, ShieldOff } from "lucide-react"
 
 export function InviteCodes() {
   const { data: codes, isLoading } = useInviteCodes()
   const { generateInviteCode, revokeInviteCode } = useAdminMutations()
   const { addToast } = useToast()
+  const { data: inviteOnlySetting, isLoading: settingLoading } = useSetting("invite_only")
+  const updateSettingMut = useUpdateSetting()
+  const inviteOnly = inviteOnlySetting?.value === "true"
   const [maxUses, setMaxUses] = useState(1)
   const [expiresIn, setExpiresIn] = useState(7)
 
@@ -57,6 +60,54 @@ export function InviteCodes() {
           Generate and manage invite codes for user registration.
         </p>
       </div>
+
+      <Card>
+        <CardContent className="flex items-center justify-between py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
+              {inviteOnly ? <ShieldCheck className="size-5" /> : <ShieldOff className="size-5" />}
+            </div>
+            <div>
+              <p className="font-medium">Invite-Only Mode</p>
+              <p className="text-xs text-muted-foreground">
+                {settingLoading
+                  ? "Loading..."
+                  : inviteOnly
+                    ? "New users must enter an invite code to register"
+                    : "Anyone can register freely"}
+              </p>
+            </div>
+          </div>
+          <button
+            role="switch"
+            aria-checked={inviteOnly}
+            disabled={settingLoading || updateSettingMut.isPending}
+            onClick={async () => {
+              try {
+                await updateSettingMut.mutateAsync({
+                  key: "invite_only",
+                  value: inviteOnly ? "false" : "true",
+                })
+                addToast({
+                  message: inviteOnly ? "Invite-only mode disabled" : "Invite-only mode enabled",
+                  variant: "success",
+                })
+              } catch {
+                addToast({ message: "Failed to update setting", variant: "error" })
+              }
+            }}
+            className={`relative inline-flex h-6 w-10 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+              inviteOnly ? "bg-primary" : "bg-input"
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow-sm transition-transform ${
+                inviteOnly ? "translate-x-4" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
