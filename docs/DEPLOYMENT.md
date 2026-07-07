@@ -1,143 +1,235 @@
 <!-- generated-by: gsd-doc-writer -->
 
-# Deployment
+# Deployment Guide
 
-## Docker (Recommended)
+## Overview
 
-Moodscaparr ships with a complete Docker deployment stack. This is the recommended way to self-host.
+Moodscaparr is a Next.js application with a PostgreSQL database, containerised with Docker. The deployment consists of two services:
 
-### Prerequisites
+| Service | Image | Purpose |
+|---------|-------|---------|
+| `app` | `node:22-alpine` (multi-stage) | Next.js standalone server + API |
+| `db` | `postgres:16-alpine` | PostgreSQL database |
 
-- Docker 24+ and Docker Compose v2
-- Git (to clone the repository)
+---
 
-### Quick Start
+## Prerequisites
+
+- Docker & Docker Compose (v2+)
+- `openssl` (to generate auth secrets)
+- A terminal with `curl` (for health checks)
+
+---
+
+## Environment Setup
+
+Copy the example env file and modify the values:
 
 ```bash
-git clone https://github.com/your-username/moodscaparr.git
-cd moodscaparr
 cp .env.example .env
-# Edit .env if desired — defaults work for local testing
+```
+
+### Required Variables
+
+| Variable | Description | Default (dev) |
+|----------|-------------|---------------|
+| `DATABASE_URL` | PostgreSQL connection string (from app to db) | `postgresql://moodscaprr:change-me-in-production@db:5432/moodscaparr` |
+| `DIRECT_URL` | Direct (non-pooled) connection string | Same as above (use Neon-style for serverless) |
+| `BETTER_AUTH_SECRET` | Secret key for Better Auth — generate with `openssl rand -hex 32` | `change-me-in-production` |
+| `BETTER_AUTH_URL` | Public URL of the deployed app | `http://localhost:8080` |
+| `NEXT_PUBLIC_GITHUB_REPO` | GitHub repo for feedback issue links | `benharvey1985/moodscaparr` |
+
+### Database URLs Explained
+
+**Local Docker (default):**
+```
+DATABASE_URL="postgresql://moodscaparr:change-me-in-production@db:5432/moodscaparr"
+DIRECT_URL="postgresql://moodscaparr:change-me-in-production@db:5432/moodscaparr"
+```
+
+**Neon / Serverless (alternative):**
+```
+DATABASE_URL="postgresql://user:password@ep-xxxx-pooler.us-east-1.aws.neon.tech/neondb?pgbouncer=true"
+DIRECT_URL="postgresql://user:password@ep-xxxx.us-east-1.aws.neon.tech/neondb"
+```
+
+> `DATABASE_URL` points to a PgBouncer-compatible pooled connection. `DIRECT_URL` bypasses the pooler for migrations.
+
+---
+
+## Docker Deployment
+
+### Build & Run
+
+```bash
+docker compose up --build -d
+```
+
+This starts both `app` and `db` containers. The `app` service waits for the database health check to pass before starting.
+
+### What Happens on Startup
+
+1. Docker Compose starts the PostgreSQL container with a health check (`pg_isready`).
+2. Once the database is healthy, the `entrypoint.sh` script runs inside the app container:
+   - Applies pending migrations via `npx prisma db push --accept-data-loss`
+   - Starts the Next.js standalone server (`node server.js`)
+3. Docker's built-in `HEALTHCHECK` pings `http://localhost:3000/api/health` every 30s.
+
+### Stop
+
+```bash
+docker compose down
+```
+
+To also remove the database volume:
+
+```bash
+docker compose down -v
+```
+
+### Rebuild After Changes
+
+```bash
+docker compose build --no-cache app
 docker compose up -d
 ```
 
-Access the app at [http://localhost:8080](http://localhost:8080). The first user to register is auto-assigned the admin role.
+---
 
-### Architecture
+## Multi-stage Dockerfile
 
-The Docker stack runs two services:
+The `Dockerfile` uses three stages:
 
-**app** — Next.js application server
-- Multi-stage Dockerfile (deps → builder → runner)
-- Alpine Linux base, non-root `node` user (UID 1000)
-- Standalone output mode for minimal image size (~300-400 MB)
-- Auto-migrates database on startup via `entrypoint.sh`
-- Health endpoint at `/api/health` for container orchestration
-- Mapped to host port `8080` (avoids conflict with local dev on port 3000)
+| Stage | Base Image | Purpose |
+|-------|-----------|---------|
+| `deps` | `node:22-alpine` | Install production dependencies (`npm ci --only=production`) |
+| `builder` | `node:22-alpine` | Install all deps, generate Prisma client, run `next build` to produce `.next/standalone` |
+| `runner` | `node:22-alpine` | Copy standalone build, Prisma artifacts, and `entrypoint.sh`; set `NODE_ENV=production` |
 
-**db** — PostgreSQL 16
-- `postgres:16-alpine` image
-- Named volume `pgdata` for data persistence
-- Health check via `pg_isready` before app starts
-- Not exposed to host (only accessible within the compose network)
+The `output: "standalone"` config (in `next.config.ts`) produces a self-contained `server.js` that includes all runtime dependencies, so only `node_modules` from `deps` and the Prisma runtime are needed at runtime.
 
-### Environment Configuration
+---
 
-| Variable | Docker Default |
-|----------|----------------|
-| `DATABASE_URL` | `postgresql://moodscaparr:change-me-in-production@db:5432/moodscaparr` |
-| `DIRECT_URL` | Same as `DATABASE_URL` (no pooler in Docker) |
-| `BETTER_AUTH_SECRET` | `change-me-in-production` (generate with `openssl rand -hex 32`) |
-| `BETTER_AUTH_URL` | `http://localhost:8080` |
-| `NEXT_PUBLIC_GITHUB_REPO` | `your-username/moodscaparr` |
+## Docker Compose Configuration
 
-Variables are loaded via the `env_file: .env` directive in `docker-compose.yml`.
+```yaml
+services:
+  app:
+    build:
+      context: .
+      args:
+        DATABASE_URL: "${DATABASE_URL}"
+        DIRECT_URL: "${DIRECT_URL}"
+    ports:
+      - "8080:3000"          # host:container
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
 
-### Database Migrations
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: moodscaparr
+      POSTGRES_PASSWORD: change-me-in-production
+      POSTGRES_DB: moodscaparr
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "moodscaparr", "-d", "moodscaparr"]
+    restart: unless-stopped
 
-Migrations run automatically on container startup via `entrypoint.sh`:
-
-```bash
-docker compose logs app | grep "Migrations complete"
+volumes:
+  pgdata:
 ```
 
-To seed sample data:
+---
+
+## Development Mode
+
+### Without Docker
 
 ```bash
-docker compose exec app npx prisma db seed
+# 1. Install dependencies
+npm install
+
+# 2. Set up .env (point to a local or remote Postgres)
+cp .env.example .env
+
+# 3. Generate Prisma client and run migrations
+npx prisma generate
+npx prisma db push
+
+# 4. (Optional) Seed demo data
+npx tsx prisma/seed.ts
+
+# 5. Start dev server
+npm run dev
 ```
 
-To reset everything:
+The app is available at `http://localhost:3000`.
 
-```bash
-docker compose down -v && docker compose up -d
+### Database Migrations & Seeding
+
+| Command | Purpose |
+|---------|---------|
+| `npx prisma generate` | Regenerate the Prisma client after schema changes |
+| `npx prisma db push` | Push schema changes to the database (migrate) |
+| `npx prisma db push --accept-data-loss` | Force push (used in entrypoint for simplicity) |
+| `npx tsx prisma/seed.ts` | Seed 60 days of demo mood entries for the admin user |
+
+The seed script (`prisma/seed.ts`) creates 60 days of mood entries for the first user with the `admin` role. It is idempotent — if entries already exist, it skips seeding.
+
+> In Docker, the entrypoint runs `prisma db push --accept-data-loss` automatically on each container start. The seed script must be run manually if desired.
+
+---
+
+## Health Check
+
+**Endpoint:** `GET /api/health`
+
+**Responses:**
+
+```json
+// 200 — Healthy
+{
+  "status": "healthy",
+  "timestamp": "2026-07-07T12:00:00.000Z",
+  "database": "connected"
+}
+
+// 503 — Unhealthy
+{
+  "status": "unhealthy",
+  "timestamp": "2026-07-07T12:00:00.000Z",
+  "database": "disconnected"
+}
 ```
 
-### Common Commands
+The endpoint runs `SELECT 1` against the database to verify connectivity. Docker's built-in `HEALTHCHECK` uses `curl -f http://localhost:3000/api/health` inside the container.
 
-| Command | Description |
-|---------|-------------|
-| `docker compose up -d` | Start the stack |
-| `docker compose down` | Stop the stack (data persists) |
-| `docker compose down -v` | Stop and delete all data |
-| `docker compose build` | Rebuild the app image after code changes |
-| `docker compose logs -f app` | Follow app logs |
-| `docker compose exec app sh` | Open a shell in the app container |
-| `docker compose ps` | Check service status |
+---
 
-### Production Checklist
+## Port Mapping
 
-- [ ] Change `BETTER_AUTH_SECRET` to a secure random value
-- [ ] Change the database password in `.env` and update `POSTGRES_PASSWORD` in `docker-compose.yml`
-- [ ] Update `BETTER_AUTH_URL` to your actual domain
-- [ ] Set up a reverse proxy (Caddy, Nginx) with TLS termination
+| Environment | Host Port | Container Port |
+|-------------|-----------|---------------|
+| Docker Compose | `8080` | `3000` |
+| Dev (`npm run dev`) | `3000` | `3000` |
 
-## Standard Deployment (without Docker)
+To change the Docker host port, edit `docker-compose.yml`:
 
-### Prerequisites
-
-- Node.js 22.x
-- PostgreSQL 16
-- npm
-
-### Steps
-
-1. Clone the repository and install dependencies:
-   ```bash
-   git clone https://github.com/your-username/moodscaparr.git
-   cd moodscaparr
-   npm install
-   ```
-
-2. Configure environment:
-   ```bash
-   cp .env.example .env
-   ```
-
-3. Set up the database:
-   ```bash
-   npx prisma migrate deploy
-   # Optional: seed sample data
-   npx prisma db seed
-   ```
-
-4. Build and start:
-   ```bash
-   npm run build
-   npm run start
-   ```
-
-The app will be available at `http://localhost:3000`.
-
-### Process Management
-
-For production without Docker, use a process manager like `pm2`:
-
-```bash
-npm install -g pm2
-pm2 start npm --name moodscaparr -- start
-pm2 save
-pm2 startup
+```yaml
+ports:
+  - "9000:3000"   # app available on host port 9000
 ```
 
-<!-- VERIFY: Production deployment without Docker requires Node.js 22, PostgreSQL 16, and a process manager -->
+---
+
+## Production Considerations
+
+- **Secrets:** Change `BETTER_AUTH_SECRET` and `POSTGRES_PASSWORD` before deploying.
+- **Database persistence:** The `pgdata` volume persists data across restarts. For production, consider using a managed Postgres (RDS, Neon, etc.) and configure the URLs in `.env`.
+- **Standalone mode:** The Dockerfile builds with `next build` which outputs to `.next/standalone`. The runner stage copies only the necessary files — no source code is present at runtime.
+- **Health checks:** Both Docker (`HEALTHCHECK`) and Docker Compose (`condition: service_healthy`) ensure the app only receives traffic when ready.

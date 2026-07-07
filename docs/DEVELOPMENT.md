@@ -1,65 +1,142 @@
 <!-- generated-by: gsd-doc-writer -->
 
-# Development
+# Development Guide
 
-## Local Setup
+## Prerequisites
+
+- **Node.js** 22+ (the Docker image uses `node:22-alpine`)
+- **npm** 10+
+- **PostgreSQL** 16 (for local dev) or Docker Desktop
+
+## Environment Setup
 
 ```bash
-# Clone and install
-git clone https://github.com/benharvey1985/moodscaparr
-cd moodscaparr
+# 1. Install dependencies
 npm install
 
-# Configure environment
-cp .env.example .env.local
-# Edit .env.local with your local Postgres URL and a generated auth secret
+# 2. Copy environment file and edit it
+cp .env.example .env
+```
 
-# Generate Prisma client and run migrations
-npx prisma generate
-npx prisma migrate dev
+Required environment variables:
 
-# Start the development server
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DATABASE_URL` | Postgres connection string | `postgresql://moodscaparr:password@localhost:5432/moodscaparr` |
+| `DIRECT_URL` | Direct connection for migrations | `postgresql://moodscaparr:password@localhost:5432/moodscaparr` |
+| `BETTER_AUTH_SECRET` | Session encryption key | `openssl rand -hex 32` to generate |
+| `BETTER_AUTH_URL` | Deployed app URL | `http://localhost:3000` |
+| `NEXT_PUBLIC_GITHUB_REPO` | GitHub repo for feedback links | `benharvey1985/moodscaparr` |
+
+## Running the Dev Server
+
+```bash
+# Start Next.js development server on http://localhost:3000
 npm run dev
 ```
 
-The app will be available at `http://localhost:3000`.
+The dev server uses the Next.js Turbopack bundler automatically (Next.js 16 default).
 
-## Build Commands
+## Database Setup
+
+This project uses **Prisma 7** with a custom config file (`prisma.config.ts`).
+
+```bash
+# Generate the Prisma client (after schema changes or first install)
+npx prisma generate
+
+# Push schema to the database (creates tables without migration files)
+npx prisma db push
+
+# Run pending migrations
+npx prisma migrate dev
+
+# Seed the database with sample data
+npx prisma db seed
+
+# Open Prisma Studio (GUI for your data)
+npx prisma studio
+```
+
+> **Note:** `prisma.config.ts` controls Prisma config. It reads `DIRECT_URL` from the environment and uses `tsx` to run the seed script at `prisma/seed.ts`.
+
+## Docker Environment
+
+### Start the full stack
+
+```bash
+docker compose up -d
+```
+
+This starts:
+- **app** — Next.js production build on `http://localhost:8080`
+- **db** — PostgreSQL 16 Alpine with health check
+
+Migrations run **automatically** on container startup via `entrypoint.sh`.
+
+### Useful Docker commands
+
+```bash
+# View logs
+docker compose logs -f app
+
+# Run a command inside the app container
+docker compose exec app npx prisma db seed
+
+# Rebuild after code changes
+docker compose build && docker compose up -d
+
+# Stop containers
+docker compose down
+
+# Stop and delete all data (including the database volume)
+docker compose down -v
+```
+
+## Build and Lint Commands
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start the development server with Turbopack (hot reload) |
-| `npm run build` | Build the app for production |
-| `npm run start` | Start the production server (run `npm run build` first) |
-| `npm run lint` | Run ESLint across the codebase |
+| `npm run dev` | Start Next.js development server |
+| `npm run build` | Build for production (`next build`; outputs standalone `.next/`) |
+| `npm run start` | Start the production server (`next start`) |
+| `npm run lint` | Run ESLint across the project |
 
-## Code Style
+The lint config (`eslint.config.mjs`) uses `eslint-config-next` with core-web-vitals and TypeScript rules, ignoring `.next/`, `out/`, `build/`, and `next-env.d.ts`.
 
-- **ESLint** — configured in `eslint.config.mjs`. Uses `eslint-config-next` with TypeScript support. Run with `npm run lint`
-- **TypeScript** — strict mode, target ES2017, configured in `tsconfig.json`. All source files are `.ts` or `.tsx`
-- **Tailwind v4** — CSS utility framework with `tw-animate-css` for animations. Configured in `postcss.config.mjs` and `globals.css`
-- **shadcn/ui** **(base-nova style)** — component library using Radix UI primitives. Component definitions in `components.json`
+> **Important:** This project uses Next.js 16 with breaking changes from earlier versions. Read `node_modules/next/dist/docs/` before writing code.
 
-## Branch Conventions
-
-No branch naming convention is documented. The default branch is `main`.
-
-## PR Process
-
-## Docker Build
-
-To build and test the Docker image locally:
+## Adding New Dependencies
 
 ```bash
-docker compose build
-docker compose up -d
-# Access at http://localhost:8080
+# Production dependency
+npm install <package-name>
+
+# Dev dependency
+npm install --save-dev <package-name>
 ```
 
-The Dockerfile uses a three-stage multi-stage build (deps → builder → runner) with Alpine base. The `output: "standalone"` option in `next.config.ts` enables the Next.js standalone output mode, producing a minimal production image (~300-400 MB).
+After adding a dependency that requires type definitions, install `@types/<package>` as a dev dependency if not included automatically.
 
-No pull request template or automation has been configured. When submitting changes:
+## Project Structure
 
-1. Ensure `npm run lint` passes with no errors
-2. Verify the build succeeds with `npm run build`
-3. Describe what the change does and why in the PR description
+```
+├── app/              # Next.js App Router pages and API routes
+├── components/       # Shared React components (shadcn/ui based)
+├── hooks/            # Custom React hooks
+├── lib/              # Utility functions and shared logic
+├── prisma/
+│   ├── schema.prisma # Database schema
+│   ├── seed.ts       # Database seed script
+│   └── generated/    # Generated Prisma client (gitignored)
+├── public/           # Static assets
+├── scripts/          # Utility scripts (e.g., add-dummy-users.ts)
+├── types/            # Shared TypeScript types
+├── prisma.config.ts  # Prisma 7 configuration
+├── proxy.ts          # API proxy configuration
+└── next.config.ts    # Next.js configuration (standalone output, CSP headers)
+```
+
+## Commit Convention
+
+All commits must be **atomic** — each commit should represent a single logical change, with all related files staged together and unrelated changes kept separate.
