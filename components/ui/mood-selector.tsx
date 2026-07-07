@@ -110,12 +110,30 @@ export function MoodSelector({
 
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Date</label>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => onDateChange(e.target.value)}
-            className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
-          />
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => onDateChange(e.target.value)}
+              className="h-8 min-w-0 flex-1 rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
+            />
+            <div className="flex shrink-0 gap-1">
+              {["Today", "Yesterday"].map((label) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => {
+                    const d = new Date()
+                    if (label === "Yesterday") d.setDate(d.getDate() - 1)
+                    onDateChange(d.toISOString().split("T")[0])
+                  }}
+                  className="h-8 cursor-pointer rounded-lg border border-input px-2.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
