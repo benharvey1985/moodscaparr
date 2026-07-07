@@ -65,17 +65,15 @@ export function AchievementCard({ achievement }: AchievementCardProps) {
       </div>
       <div className="mt-auto space-y-1">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>{isUnlocked ? "Complete" : `${progress} / ${maxProgress}`}</span>
-          <span>{isUnlocked ? "100%" : `${percentage}%`}</span>
+          <span>{progress} / {maxProgress}</span>
+          <span>{percentage}%</span>
         </div>
-        {!isUnlocked && (
-          <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-            <div
-              className={cn("h-full rounded-full transition-all duration-500", colors.bar)}
-              style={{ width: `${percentage}%` }}
-            />
-          </div>
-        )}
+        <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+          <div
+            className={cn("h-full rounded-full transition-all duration-500", colors.bar)}
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
       </div>
     </Card>
   )
