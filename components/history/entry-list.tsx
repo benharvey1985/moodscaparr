@@ -27,7 +27,7 @@ export function EntryList({ entries, isLoading, isError, error, onRetry, classNa
     return (
       <div className={cn("space-y-2", className)}>
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-4 rounded-[--radius-moderate] border border-l-4 bg-card p-4">
+          <div key={i} className="flex items-center gap-4 rounded-xl border border-l-4 bg-card p-4">
             <Skeleton className="size-10 rounded-full" />
             <div className="flex-1 space-y-2">
               <Skeleton className="h-4 w-3/4" />

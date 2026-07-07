@@ -53,7 +53,7 @@ export function MoodSelector({
               <div key={category} className="space-y-2">
                 <h3
                   className={cn(
-                    "rounded-[--radius-standard] px-3 py-1.5 text-center text-sm font-semibold",
+                    "rounded-xl px-3 py-1.5 text-center text-sm font-semibold",
                     getCategoryBg(category, isSelected)
                   )}
                 >
@@ -70,7 +70,7 @@ export function MoodSelector({
                         type="button"
                         onClick={() => onMoodSelect(category, idx)}
                         className={cn(
-                          "flex cursor-pointer flex-col items-center gap-1 rounded-[--radius-standard] p-2 transition-all hover:scale-105",
+                          "flex cursor-pointer flex-col items-center gap-1 rounded-xl p-2 transition-all hover:scale-105",
                           getMoodBg(category, isActive)
                         )}
                       >

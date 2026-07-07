@@ -59,7 +59,7 @@ export function QuickLog() {
               onClick={() => handleMoodClick(selectedCategory, idx)}
               disabled={createMutation.isPending}
               className={cn(
-                "flex cursor-pointer flex-col items-center gap-1 rounded-[--radius-standard] p-3 transition-all hover:scale-105",
+                "flex cursor-pointer flex-col items-center gap-1 rounded-xl p-3 transition-all hover:scale-105",
                 getMoodBg(selectedCategory, false)
               )}
             >
@@ -83,7 +83,7 @@ export function QuickLog() {
           type="button"
           onClick={() => setSelectedCategory(cat.key)}
           className={cn(
-            "flex cursor-pointer items-center justify-center gap-1.5 rounded-[--radius-moderate] p-3 text-sm font-medium transition-all hover:scale-[1.02]",
+            "flex cursor-pointer items-center justify-center gap-1.5 rounded-xl p-3 text-sm font-medium transition-all hover:scale-[1.02]",
             cat.cls
           )}
         >
