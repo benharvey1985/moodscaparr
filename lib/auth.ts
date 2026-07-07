@@ -59,4 +59,19 @@ export const auth = betterAuth({
       httpOnly: true,
     },
   },
+  trustedOrigins: (request) => {
+    if (!request) return []
+    const origins: string[] = []
+
+    const origin = request.headers.get("origin")
+    if (origin) origins.push(origin)
+
+    const host = request.headers.get("host")
+    if (host) {
+      origins.push(`http://${host}`)
+      origins.push(`https://${host}`)
+    }
+
+    return origins
+  },
 })
