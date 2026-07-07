@@ -23,9 +23,10 @@ export async function POST() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  await prisma.userProfile.update({
+  await prisma.userProfile.upsert({
     where: { id: session.user.id },
-    data: { onboardingComplete: true },
+    update: { onboardingComplete: true },
+    create: { id: session.user.id, onboardingComplete: true },
   })
 
   return NextResponse.json({ success: true })
