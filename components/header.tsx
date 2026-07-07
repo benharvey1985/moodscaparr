@@ -157,30 +157,6 @@ export function Header({ user }: HeaderProps) {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => router.push("/dashboard")}>
-                <LayoutDashboard className="size-4" />
-                Dashboard
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/wizard")}>
-                <Plus className="size-4" />
-                New Entry
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/history")}>
-                <History className="size-4" />
-                History
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/calendar")}>
-                <Calendar className="size-4" />
-                Calendar
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/analytics")}>
-                <BarChart3 className="size-4" />
-                Analytics
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/achievements")}>
-                <Award className="size-4" />
-                Achievements
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push("/settings")}>
                 <Settings className="size-4" />
                 Settings
