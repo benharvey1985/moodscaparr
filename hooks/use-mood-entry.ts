@@ -64,6 +64,7 @@ export function useCreateMoodEntry() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: moodKeys.all })
       queryClient.invalidateQueries({ queryKey: ["stats"] })
+      queryClient.invalidateQueries({ queryKey: ["history"] })
     },
   })
 }
@@ -94,6 +95,7 @@ export function useUpdateMoodEntry() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: moodKeys.all })
       queryClient.invalidateQueries({ queryKey: ["stats"] })
+      queryClient.invalidateQueries({ queryKey: ["history"] })
     },
   })
 }
@@ -121,6 +123,7 @@ export function useDeleteMoodEntry() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: moodKeys.all })
       queryClient.invalidateQueries({ queryKey: ["stats"] })
+      queryClient.invalidateQueries({ queryKey: ["history"] })
     },
   })
 }

@@ -25,7 +25,7 @@ function HistoryContent() {
   const [category, setCategory] = useState<string | null>(null)
   const [page, setPage] = useState(1)
 
-  const params = { q: query || undefined, category: category || undefined, page, limit: 20 }
+  const params = { q: query || undefined, category: category || undefined, page, limit: 50 }
   const { data, isLoading, isError, error, refetch } = useSearchEntries(params)
 
   useEffect(() => {
