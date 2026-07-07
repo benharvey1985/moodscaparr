@@ -192,9 +192,9 @@ export function InviteCodes() {
                     <TableCell>
                       {(() => {
                         if (!code.active) return <Badge variant="secondary">Revoked</Badge>
-                        if (code.uses >= code.maxUses) return <Badge variant="secondary">Exhausted</Badge>
-                        if (new Date(code.expiresAt) < new Date()) return <Badge variant="secondary">Expired</Badge>
-                        return <Badge variant="outline">Active</Badge>
+                        if (code.uses >= code.maxUses) return <Badge variant="outline" className="border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-400">Exhausted</Badge>
+                        if (new Date(code.expiresAt) < new Date()) return <Badge variant="destructive">Expired</Badge>
+                        return <Badge variant="default">Active</Badge>
                       })()}
                     </TableCell>
                     <TableCell>
