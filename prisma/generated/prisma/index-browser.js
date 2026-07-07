@@ -218,6 +218,18 @@ exports.Prisma.InviteCodeScalarFieldEnum = {
   active: 'active'
 };
 
+exports.Prisma.AppSettingScalarFieldEnum = {
+  key: 'key',
+  value: 'value'
+};
+
+exports.Prisma.InviteConsumptionScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  code: 'code',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.AchievementScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -256,6 +268,8 @@ exports.Prisma.ModelName = {
   UserProfile: 'UserProfile',
   SsoProvider: 'SsoProvider',
   InviteCode: 'InviteCode',
+  AppSetting: 'AppSetting',
+  InviteConsumption: 'InviteConsumption',
   Achievement: 'Achievement'
 };
 

@@ -132,6 +132,18 @@ model InviteCode {
   active    Boolean  @default(true)
 }
 
+model AppSetting {
+  key   String @id
+  value String
+}
+
+model InviteConsumption {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  code      String
+  createdAt DateTime @default(now())
+}
+
 model Achievement {
   id          String   @id @default(cuid())
   userId      String
