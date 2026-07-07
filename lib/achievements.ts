@@ -16,7 +16,7 @@ export async function getUserAchievements(userId: string): Promise<UserAchieveme
       progress: record?.progress ?? 0,
       maxProgress: def.maxProgress,
       definition: def,
-      isUnlocked: !!record,
+      isUnlocked: record ? record.progress >= def.maxProgress : false,
     }
   })
 }
