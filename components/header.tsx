@@ -112,16 +112,18 @@ export function Header({ user }: HeaderProps) {
             </span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">
-                  {user?.name || "User"}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {user?.email}
-                </span>
-              </div>
-            </DropdownMenuLabel>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">
+                    {user?.name || "User"}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {user?.email}
+                  </span>
+                </div>
+              </DropdownMenuLabel>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem onClick={() => router.push("/dashboard")}>
