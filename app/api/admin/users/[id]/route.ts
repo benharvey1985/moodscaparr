@@ -69,21 +69,7 @@ export async function DELETE(
     return NextResponse.json({ error: "User not found" }, { status: 404 })
   }
 
-  if (user.banned && user.banReason === "deleted") {
-    await prisma.user.delete({ where: { id } })
-    audit("admin.user.hard-delete", { adminId: session.user.id, targetId: id })
-    return NextResponse.json({ deleted: true })
-  }
-
-  await prisma.user.update({
-    where: { id },
-    data: {
-      banned: true,
-      banReason: "deleted",
-      banExpires: addDays(new Date(), 30),
-    },
-  })
-
-  audit("admin.user.soft-delete", { adminId: session.user.id, targetId: id })
-  return NextResponse.json({ deleted: true, soft: true })
+  await prisma.user.delete({ where: { id } })
+  audit("admin.user.delete", { adminId: session.user.id, targetId: id })
+  return NextResponse.json({ deleted: true })
 }
