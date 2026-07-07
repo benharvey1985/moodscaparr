@@ -8,17 +8,23 @@ import Link from "next/link"
 const TOTAL_BADGES = ACHIEVEMENT_DEFINITIONS.length
 
 export function AchievementSummary() {
-  const { data: achievements } = useQuery({
+  const { data } = useQuery({
     queryKey: ["achievements"],
     queryFn: async () => {
       const res = await fetch("/api/achievements", { credentials: "include" })
       if (!res.ok) throw new Error("Failed to fetch achievements")
-      return res.json()
+      return res.json() as Promise<{
+        achievements: Array<{ badgeId: string; isUnlocked: boolean }>
+        completionPercentage: number
+        unlockedCount: number
+        totalCount: number
+      }>
     },
   })
 
+  const achievements = data?.achievements ?? []
   const unlockedIds = new Set(
-    (achievements ?? []).filter((a: { isUnlocked: boolean }) => a.isUnlocked).map((a: { badgeId: string }) => a.badgeId)
+    achievements.filter((a) => a.isUnlocked).map((a) => a.badgeId)
   )
   const unlockedCount = unlockedIds.size
   const pct = TOTAL_BADGES ? Math.round((unlockedCount / TOTAL_BADGES) * 100) : 0
