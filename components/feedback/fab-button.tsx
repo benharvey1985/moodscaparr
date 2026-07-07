@@ -1,21 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { authClient } from "@/lib/auth-client"
+import { useState } from "react"
 import { MessageCircle } from "lucide-react"
 import { FeedbackDialog } from "./feedback-dialog"
 
 function FABButton() {
   const [open, setOpen] = useState(false)
-  const [authenticated, setAuthenticated] = useState(false)
-
-  useEffect(() => {
-    authClient.getSession().then((res) => {
-      if (res?.data) setAuthenticated(true)
-    })
-  }, [])
-
-  if (!authenticated) return null
 
   return (
     <>
