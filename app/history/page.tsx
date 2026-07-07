@@ -67,6 +67,7 @@ function HistoryContent() {
                 name: session.user.name,
                 email: session.user.email,
                 image: session.user.image,
+                role: session.user.role,
               }
             : null
         }
