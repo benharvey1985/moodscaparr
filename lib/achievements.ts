@@ -200,6 +200,12 @@ export async function checkAndUnlockAchievements(userId: string): Promise<CheckR
       })
       results.push({ badgeId: def.id, progress: currentProgress, isNewlyUnlocked: true })
     } else if (wasUnlocked) {
+      if (currentProgress > 0) {
+        await prisma.achievement.updateMany({
+          where: { userId, badgeId: def.id },
+          data: { progress: currentProgress },
+        })
+      }
       results.push({ badgeId: def.id, progress: currentProgress, isNewlyUnlocked: false })
     } else {
       await prisma.achievement.upsert({

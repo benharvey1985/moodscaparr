@@ -4,6 +4,7 @@ import { headers } from "next/headers"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { rateLimit } from "@/lib/rate-limit"
+import { checkAndUnlockAchievements } from "@/lib/achievements"
 
 const importLimiter = rateLimit({ interval: 60000, max: 5 })
 
@@ -90,6 +91,10 @@ export async function POST(request: Request) {
 
     return { imported, skipped }
   })
+
+  if (imported > 0) {
+    await checkAndUnlockAchievements(userId)
+  }
 
   return NextResponse.json({ imported, skipped })
 }

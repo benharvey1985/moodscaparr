@@ -206,7 +206,7 @@ export function InviteCodes() {
                         >
                           <Copy className="size-3.5" />
                         </Button>
-                        {code.active && code.uses < code.maxUses && (
+                        {code.active && (
                           <Button
                             variant="ghost"
                             size="icon-sm"
