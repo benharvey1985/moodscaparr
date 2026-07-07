@@ -22,7 +22,7 @@ import { OnboardingTour } from "@/components/onboarding/onboarding-tour"
 function DashboardContent() {
   const router = useRouter()
   const [session, setSession] = useState<{
-    user: { name?: string | null; email?: string | null; image?: string | null }
+    user: { name?: string | null; email?: string | null; image?: string | null; role?: string }
   } | null>(null)
   const [sessionLoading, setSessionLoading] = useState(true)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
