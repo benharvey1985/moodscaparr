@@ -11,6 +11,7 @@ import { Header } from "@/components/header"
 import { Separator } from "@/components/ui/separator"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ErrorBoundary } from "@/components/ui/error-boundary"
+import { DeleteAccount } from "@/components/settings/delete-account"
 
 function SettingsContent() {
   const router = useRouter()
@@ -75,11 +76,12 @@ function SettingsContent() {
           <CardHeader>
             <CardTitle>Privacy</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
               Your data is stored securely and is only accessible to you. You can export or
               delete your data at any time.
             </p>
+            <DeleteAccount />
           </CardContent>
         </Card>
       </main>
