@@ -113,25 +113,25 @@ export function InviteCodes() {
         <CardHeader>
           <CardTitle>Generate New Code</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap items-end gap-3">
-          <div className="space-y-1">
-            <label className="text-xs font-medium">Max Uses</label>
+        <CardContent className="flex flex-wrap items-end gap-6 p-5">
+          <div className="flex flex-col gap-3">
+            <label className="text-sm font-medium">Max Uses</label>
             <Input
               type="number"
               min={1}
               value={maxUses}
               onChange={(e) => setMaxUses(parseInt(e.target.value) || 1)}
-              className="w-20"
+              className="w-28"
             />
           </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium">Expires In (days)</label>
+          <div className="flex flex-col gap-3">
+            <label className="text-sm font-medium">Expires In (days)</label>
             <Input
               type="number"
               min={1}
               value={expiresIn}
               onChange={(e) => setExpiresIn(parseInt(e.target.value) || 7)}
-              className="w-20"
+              className="w-28"
             />
           </div>
           <Button onClick={handleGenerate}>
@@ -190,9 +190,12 @@ export function InviteCodes() {
                       {new Date(code.expiresAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={code.active ? "outline" : "secondary"}>
-                        {code.active ? "Active" : "Revoked"}
-                      </Badge>
+                      {(() => {
+                        if (!code.active) return <Badge variant="secondary">Revoked</Badge>
+                        if (code.uses >= code.maxUses) return <Badge variant="secondary">Exhausted</Badge>
+                        if (new Date(code.expiresAt) < new Date()) return <Badge variant="secondary">Expired</Badge>
+                        return <Badge variant="outline">Active</Badge>
+                      })()}
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
@@ -203,7 +206,7 @@ export function InviteCodes() {
                         >
                           <Copy className="size-3.5" />
                         </Button>
-                        {code.active && (
+                        {code.active && code.uses < code.maxUses && (
                           <Button
                             variant="ghost"
                             size="icon-sm"
