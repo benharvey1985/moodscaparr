@@ -4,7 +4,7 @@ export default function WizardLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="mx-auto flex min-h-screen max-w-2xl flex-col px-4 py-8">
+    <div className="flex min-h-screen flex-col">
       {children}
     </div>
   )
