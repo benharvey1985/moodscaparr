@@ -40,14 +40,8 @@ function RegisterForm() {
       .finally(() => setCheckingStatus(false))
   }, [])
 
-  const { register, handleSubmit, formState: { errors }, setError: setFormError, watch } = useForm<Schema>({
-    resolver: zodResolver(
-      inviteOnly
-        ? schema.extend({
-            inviteCode: z.string().min(1, "Invite code is required"),
-          })
-        : schema
-    ),
+  const { register, handleSubmit, formState: { errors }, setError: setFormError } = useForm<Schema>({
+    resolver: zodResolver(schema),
     defaultValues: { name: "", email: "", password: "", confirmPassword: "", inviteCode: "" },
   })
 
@@ -55,7 +49,13 @@ function RegisterForm() {
     setLoading(true)
     setError(null)
 
-    if (inviteOnly && data.inviteCode) {
+    if (inviteOnly) {
+      if (!data.inviteCode) {
+        setFormError("root", { message: "Invite code is required" })
+        setLoading(false)
+        return
+      }
+
       const res = await fetch("/api/auth/validate-invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
