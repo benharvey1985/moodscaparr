@@ -47,8 +47,8 @@ export default function RootLayout({
           <Providers>
             <Toaster>
               {children}
+              <FABButton />
             </Toaster>
-            <FABButton />
           </Providers>
         </ThemeProvider>
       </body>
