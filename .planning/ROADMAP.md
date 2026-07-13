@@ -94,3 +94,13 @@ Plans:
 | 2. Dashboard, History & Insights | 4/4 | Complete | 2026-07-06 |
 | 3. Gamification, Profile & Admin | 2/2 | Complete | 2026-07-06 |
 | 4. Docker Deployment | 1/1 | Complete | 2026-07-06 |
+
+### Phase 04.1: Address documentation gaps (INSERTED)
+
+**Goal:** Close the two documentation gaps identified in the v1.1 milestone audit — backfill 04-01-VERIFICATION.md for Phase 4 and 01-03-SUMMARY.md for Phase 1
+**Requirements**: none (cleanup/documentation phase)
+**Depends on:** Phase 4
+**Plans:** 1 plan
+
+Plans:
+- [ ] 04.1-01-PLAN.md — Backfill VERIFICATION.md (Phase 4) and SUMMARY.md (Phase 1)

@@ -1,5 +1,5 @@
 ---
-status: fixing
+status: resolved
 trigger: Bug #1: Dashboard Issue — KPI cards not refreshing after quick log
 created: 2026-07-07
 updated: 2026-07-07
@@ -25,3 +25,5 @@ updated: 2026-07-07
 
 **Files changed:**
 - `hooks/use-mood-entry.ts`
+
+**Verified:** 2026-07-13 — all three `onSettled` handlers include `["stats"]` and `["history"]` invalidation (lines 66-67, 97-98, 125-126). Marked resolved during v1.1 milestone close.
