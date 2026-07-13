@@ -1,39 +1,73 @@
-# Stack Research: Docker Deployment
+# Technology Stack
 
-## Stack Changes
-- Add `output: "standalone"` to `next.config.ts` — enables Next.js standalone output mode (self-contained `.next/standalone` directory)
-- No new npm packages required — Docker and Compose are infra, not app dependencies
-- Prisma adapter stays `@prisma/adapter-pg` — Postgres runs in the same compose stack
+**Project:** Moodscaparr v1.2 UI Redesign
+**Researched:** 2026-07-13
+**Focus:** Layout restructure, sidebar, bottom tabs, glassmorphism
 
-## Dockerfile Pattern
-- **Base image**: `node:20-alpine` (matches existing Node target, Alpine keeps image small)
-- **3 stages**: dependencies → builder → runner
-  - `dependencies`: `npm ci --frozen-lockfile` with cache mounts
-  - `builder`: copy deps + source, `npm run build`
-  - `runner`: copy `.next/standalone`, `public/`, `.next/static`, Prisma engine files
-- **Alpine extras**: `openssl` + `libc6-compat` for Prisma engine compatibility
-- **Port**: 3000, **Host**: `HOSTNAME=0.0.0.0`
-- **User**: non-root `node` user for security
-- **Entrypoint**: script that runs `prisma migrate deploy` before starting the server
+## Recommended Additions to Existing Stack
 
-## docker-compose.yml Pattern
-- 2 services: `app` (build from Dockerfile) + `db` (postgres:16-alpine)
-- Health check on db (`pg_isready`) with `depends_on: condition: service_healthy`
-- Named volume `postgres_data` for persistence
-- Environment variables from `.env` file
-- Custom bridge network for inter-service communication
+### Core Framework
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| shadcn Sidebar | Latest (via CLI) | Desktop sidebar component | Already has CSS vars in globals.css, built-in responsive Sheet behavior, collapsible state management, active route highlighting |
+| shadcn Breadcrumb | Latest (via CLI) | Page hierarchy in top bar | Pair with sidebar for breadcrumb navigation context |
+| shadcn Resizable | Latest (optional) | Drag-resizable sidebar | Only if drag-to-resize is desired; adds complexity |
 
-## Prisma in Docker
-- Need `prisma` CLI and `@prisma/client` available at runtime for migrations
-- Copy subset of `node_modules/prisma` and `node_modules/@prisma` to runner stage
-- Entrypoint: `npx prisma migrate deploy && node server.js`
-- Generate Prisma client during build (already part of build step)
-- `DATABASE_URL` points to `postgres://moodscape:moodscape@db:5432/moodscape` (service name `db`, not `localhost`)
+### CSS Architecture
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| CSS Custom Properties | Native | Glassmorphism design tokens | Integrates with existing OKLCH token system; no runtime overhead |
+| Tailwind backdrop-blur utilities | 4.x | Glass blur effects | Already in project; `backdrop-blur-lg`, `backdrop-blur-xl` available |
+| `@supports` queries | Native | Glassmorphism fallback | 96% browser support; graceful degradation for old browsers |
 
-## .dockerignore
-- `node_modules`, `.next`, `.git`, `.env`, `.env.local`, `*.md`, `.planning/`
+### Supporting Libraries
+| Library | Purpose | When to Use |
+|---------|---------|-------------|
+| `recharts` (existing) | Charts in analytics | Already in project — unchanged |
+| `lucide-react` (existing) | Nav item icons | Already in project — used for sidebar + bottom tab icons |
+| `clsx` + `tailwind-merge` (existing) | `cn()` utility | Already in project — used for conditional class merging |
 
-## No-Go Items
-- Do NOT pass DATABASE_URL as build arg (secrets leak into image layers)
-- Do NOT use full `node_modules` in runner — use standalone output
-- Do NOT skip health check on db — race condition on first start
+## Alternatives Considered
+
+| Category | Recommended | Alternative | Why Not |
+|----------|-------------|-------------|---------|
+| Sidebar | shadcn Sidebar | Build from scratch | 3+ days of work for accessible, responsive sidebar. shadcn handles collapse state, mobile Sheet, keyboard nav, RTL |
+| Mobile nav | shadcn Sidebar auto-Sheet | Separate Drawer component | shadcn already converts sidebar to Sheet on mobile. Adding a separate drawer is redundant. Bottom tabs are additional, not replacement |
+| Nav config | Centralized `lib/navigation.ts` | Per-component config | Duplication risk — adding a nav item means touching 2+ files |
+| Glassmorphism | CSS custom properties + Tailwind classes | CSS-in-JS (styled-components, etc.) | CSS custom properties are the simplest integration with Tailwind v4's `@theme` system. No additional runtime |
+| Layout state | React Context (SidebarProvider) | Zustand | shadcn already provides context-based state management. Adding Zustand is unnecessary complexity for a single boolean collapse state |
+
+## Installation
+
+```bash
+# Install shadcn sidebar (core component)
+npx shadcn@latest add sidebar
+
+# Optional: breadcrumb for top bar
+npx shadcn@latest add breadcrumb
+
+# Optional: resizable for drag-to-resize sidebar
+npx shadcn@latest add resizable
+```
+
+## Dependencies to Remove
+
+| Package | Reason | When |
+|---------|--------|------|
+| `@base-ui/react` | Only used by old mobile drawer in header.tsx | After header.tsx deletion |
+
+## Sources
+
+- [shadcn Sidebar installation guide](https://ui.shadcn.com/docs/components/base/sidebar) — HIGH confidence
+- [CSS Glassmorphism: The Definitive Developer's Guide 2026](https://nineproo.com/blog/css-glassmorphism-guide) — MEDIUM confidence
+- Existing `components.json` confirms shadcn is already configured with `base-nova` style and `neutral` base color
+
+## Stack Decision Map
+
+```
+Add sidebar? → YES → Use shadcn Sidebar (already in ecosystem)
+Add bottom tabs? → YES → Build custom MobileBottomNav component (simple, no library needed)
+Add glassmorphism? → YES → CSS custom properties + Tailwind utilities (no library needed)
+Need breadcrumbs? → OPTIONAL → Install shadcn Breadcrumb if hierarchy is desired
+Need drag-resize? → NO → Not in scope for v1.2
+```
