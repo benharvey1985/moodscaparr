@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Providers } from "@/components/providers"
 import { Toaster } from "@/components/ui/toaster"
 import { FABButton } from "@/components/feedback/fab-button"
+import { SidebarProvider } from "@/components/ui/sidebar"
 import "./globals.css"
 
 const geistSans = Geist({
@@ -45,10 +46,12 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <Providers>
-            <Toaster>
-              {children}
-              <FABButton />
-            </Toaster>
+            <SidebarProvider>
+              <Toaster>
+                {children}
+                <FABButton />
+              </Toaster>
+            </SidebarProvider>
           </Providers>
         </ThemeProvider>
       </body>
