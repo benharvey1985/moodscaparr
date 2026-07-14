@@ -1,9 +1,15 @@
 # Moodscaparr
 
-## Current Milestone: v1.1 Docker Deployment ✓ SHIPPED
+## Current Milestone: v1.2 UI Redesign
 
-**Goal:** Make Moodscaparr deployable and shareable with a simple Docker setup.
-**Status:** All 13 requirements verified, 2 documentation gaps closed.
+**Goal:** Modernize Moodscaparr's UI with a glassmorphism/frosted aesthetic, full site-wide layout refresh, and restructured navigation (sidebar + mobile bottom tabs).
+
+**Target features:**
+- Glassmorphism/frosted design system (translucent cards, blurred backdrops, depth layers)
+- Full site-wide layout restructure with new spacing hierarchy
+- Desktop sidebar navigation replacing top nav
+- Mobile bottom tab bar for touch navigation
+- Responsive redesign across all pages (dashboard, wizard, history, analytics, profile, admin)
 
 ## What This Is
 
@@ -37,7 +43,11 @@ Make mood tracking effortless enough to do daily, rewarding enough to sustain as
 
 ### Active
 
-(New requirements for next milestone — none yet deferred from v1.1)
+- [ ] Glassmorphism design system with frosted cards, blurred backdrops, and depth layers
+- [ ] Desktop sidebar navigation with icon + label links
+- [ ] Mobile bottom tab bar navigation
+- [ ] Full site-wide layout restructure (all pages)
+- [ ] Responsive layout with consistent spacing hierarchy
 
 ### Out of Scope
 
@@ -89,4 +99,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-13 after v1.1 milestone complete*
+*Last updated: 2026-07-13 after starting v1.2 milestone*
