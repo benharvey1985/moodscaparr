@@ -133,6 +133,15 @@ None — threat model T-07-01 (spoofing via old routes) mitigated by deleting al
 
 All 5 "simple" client pages migrated. Ready for Plan 02 (dashboard + wizard + admin migration) or Phase 8 cleanup (delete header.tsx, remove old imports).
 
+## Self-Check: PASSED
+
+- ✓ All 8 migrated files exist under `app/(app)/`
+- ✓ All 5 old flat directories deleted
+- ✓ No Header imports in any migrated page
+- ✓ No authClient.getSession calls in any migrated page
+- ✓ TypeScript compiles with zero errors (`tsc --noEmit`)
+- ✓ 4 plan commits verified in git log
+
 ---
 
 *Phase: 07-page-migration*
