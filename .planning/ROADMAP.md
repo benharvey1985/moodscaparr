@@ -8,7 +8,7 @@ Phase 1–3 built the full MVP: auth, mood diary, dashboard, history, analytics,
 
 - ✅ **v1.0 MVP** — Phases 1-3 (shipped 2026-07-06)
 - ✅ **v1.1 Docker Deployment** — Phase 4, 4.1 (shipped 2026-07-13)
-- 📋 **v1.2 UI Redesign** — Phases 5-8 (current milestone)
+- ✅ **v1.2 UI Redesign** — Phases 5-8 (shipped 2026-07-14)
 - 📋 **v2.0** — Planned
 
 ## Phases
@@ -30,12 +30,15 @@ Phase 1–3 built the full MVP: auth, mood diary, dashboard, history, analytics,
 
 </details>
 
-### 📋 v1.2 UI Redesign (Current)
+<details>
+<summary>✅ v1.2 UI Redesign (Phases 5-8) — SHIPPED 2026-07-14</summary>
 
 - [x] **Phase 5: Foundation** — Route groups & nav config module (completed 2026-07-14)
 - [x] **Phase 6: Layout Shell & Session** — Sidebar, bottom tabs, responsive layout, session provider (completed 2026-07-14)
-- [x] **Phase 7: Page Migration** — All 7+ pages migrated to new layout (completed 2026-07-14)
-- [ ] **Phase 8: Cleanup** — Delete old files, remove unused dependencies
+- [x] **Phase 7: Page Migration** — All 8 pages migrated to `(app)/` route group (completed 2026-07-14)
+- [x] **Phase 8: Cleanup** — Removed unused Header component (completed 2026-07-14)
+
+</details>
 
 ### 📋 v2.0 (Planned)
 
@@ -115,11 +118,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
 
   1. `components/header.tsx` deleted — zero `import.*Header from` matches across codebase
-  2. `@base-ui/react` removed from `package.json` — verified unused via grep
-  3. All 7+ migrated pages load without errors in both desktop and mobile viewports
-  4. No console errors related to missing layout infrastructure or orphaned imports
+  2. All 8 migrated pages load without errors in both desktop and mobile viewports
+  3. No console errors related to missing layout infrastructure or orphaned imports
 
-**Plans**: TBD
+**Plans**: 0 plans (inline cleanup)
 
 ## Progress
 
@@ -133,4 +135,4 @@ Plans:
 | 5. Foundation | v1.2 | 1/1 | Complete   | 2026-07-14 |
 | 6. Layout Shell & Session | v1.2 | 2/2 | Complete   | 2026-07-14 |
 | 7. Page Migration | v1.2 | 2/2 | Complete   | 2026-07-14 |
-| 8. Cleanup | v1.2 | 0/0 | Not started | - |
+| 8. Cleanup | v1.2 | inline | ✅ Complete | 2026-07-14 |
