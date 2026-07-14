@@ -1,73 +1,61 @@
 # Requirements: Moodscaparr
 
-**Defined:** 2026-07-06
+**Defined:** 2026-07-13
 **Core Value:** Make mood tracking effortless enough to do daily, rewarding enough to sustain as a habit, and insightful enough to reveal personal emotional patterns.
 
-## v1.1 Requirements
+## v1.2 Requirements
 
-Requirements for milestone v1.1 (Docker Deployment). Each maps to roadmap phases.
+Requirements for milestone v1.2 (UI Redesign). Each maps to roadmap phases.
 
-### Docker Infrastructure
+### Layout & Navigation
 
-- [ ] **DOCK-01**: Multi-stage Dockerfile with dependencies, build, and runner stages using Alpine base
-- [ ] **DOCK-02**: Runner stage runs as non-root node user for security
-- [ ] **DOCK-03**: Next.js standalone output mode enabled in next.config.ts
-- [ ] **DOCK-04**: Entrypoint script runs `prisma migrate deploy` before starting the server
-- [ ] **DOCK-05**: .dockerignore excludes node_modules, .next, .git, .env files, and .planning
+- [ ] **UI-01**: Desktop sidebar navigation with icon + label links, collapsed/expanded states, and active route highlighting
+- [ ] **UI-02**: Mobile bottom tab bar with 5 tabs, safe-area-aware, responsive breakpoint at 1024px
+- [ ] **UI-03**: Route groups restructuring — `(app)` layout for authenticated pages, `(auth)` layout for login/register
+- [ ] **UI-04**: Single shared nav config module consumed by both sidebar and bottom tabs
+- [ ] **UI-05**: Responsive layout switching between sidebar (desktop) and bottom tabs (mobile)
 
-### Compose
+### Infrastructure
 
-- [ ] **COMP-01**: docker-compose.yml defines app + postgres:16-alpine services
-- [ ] **COMP-02**: Postgres health check (pg_isready) with app waiting for healthy db
-- [ ] **COMP-03**: Named volume for Postgres data that persists across container restarts/updates
-- [ ] **COMP-04**: App container uses depends_on with service_healthy condition
-
-### Configuration
-
-- [ ] **CONF-01**: .env.example documents all required environment variables with descriptions
-- [ ] **CONF-02**: Environment variables passed to container via .env file at runtime
-
-### Quality & Documentation
-
-- [ ] **QUAL-01**: /api/health endpoint returns 200 with app + database connectivity status
-- [ ] **QUAL-02**: README updated with Docker prerequisites, setup, and run instructions
+- [ ] **UI-06**: Session/auth provider in root layout eliminating per-page useEffect auth boilerplate
+- [x] **UI-07**: All 7+ pages migrated to new layout shell, Header boilerplate stripped
+- [ ] **UI-08**: Cleanup — delete old `header.tsx`, remove unused dependencies
 
 ## v2 Requirements
 
-(None deferred — this milestone covers the full Docker scope.)
+(None deferred — this milestone covers the full UI redesign scope.)
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Cloud deployment (Vercel, Railway) | Docker self-hosting only — cloud deploy deferred to future milestone |
-| Docker Compose dev mode (hot reload) | Not needed for deployment use case; dev can use existing `npm run dev` |
-| CI/CD pipeline | Out of scope for this milestone — image building is manual |
-| Docker Compose for production orchestration (Swarm/K8s) | Single-host Docker Compose is sufficient for self-hosting |
+| Glassmorphism/frosted effects | Deferred — focus on layout + navigation structure first |
+| Framer Motion or animation libraries | Overkill — CSS transitions sufficient for v1.2 |
+| Drag-to-reorder sidebar | Not needed for 6 flat navigation items |
+| Resizable sidebar | No value for a personal mood diary app |
+| Full-page glass backgrounds | Extreme GPU cost on mobile devices |
+| Swipe gestures between pages | Complex, conflicts with scroll |
+| Admin-specific sidebar variant | Admin items shown conditionally in same sidebar |
+| FAB button relocation | Handled in cleanup — FAB removed during page migration |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DOCK-01 | Phase 4 | Pending |
-| DOCK-02 | Phase 4 | Pending |
-| DOCK-03 | Phase 4 | Pending |
-| DOCK-04 | Phase 4 | Pending |
-| DOCK-05 | Phase 4 | Pending |
-| COMP-01 | Phase 4 | Pending |
-| COMP-02 | Phase 4 | Pending |
-| COMP-03 | Phase 4 | Pending |
-| COMP-04 | Phase 4 | Pending |
-| CONF-01 | Phase 4 | Pending |
-| CONF-02 | Phase 4 | Pending |
-| QUAL-01 | Phase 4 | Pending |
-| QUAL-02 | Phase 4 | Pending |
+| UI-01 | Phase 6 | Pending |
+| UI-02 | Phase 6 | Pending |
+| UI-03 | Phase 5 | Pending |
+| UI-04 | Phase 5 | Pending |
+| UI-05 | Phase 6 | Pending |
+| UI-06 | Phase 6 | Pending |
+| UI-07 | Phase 7 | Complete |
+| UI-08 | Phase 8 | Pending |
 
 **Coverage:**
-- v1.1 requirements: 13 total
-- Mapped to phases: 13
+- v1.2 requirements: 8 total
+- Mapped to phases: 8
 - Unmapped: 0 ✓
 
 ---
-*Requirements defined: 2026-07-06*
-*Last updated: 2026-07-06 after initial definition*
+*Requirements defined: 2026-07-13*
+*Last updated: 2026-07-13 after initial definition*

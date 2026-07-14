@@ -76,10 +76,13 @@ export function EntryList({ entries, isLoading, isError, error, onRetry, classNa
     <>
       <div className={cn("space-y-2", className)}>
         {entries.map((entry) => (
-          <button
+          <div
             key={entry.id}
             onClick={() => setSelectedEntry(entry)}
-            className="w-full text-left"
+            className="w-full cursor-pointer text-left"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedEntry(entry) }}
           >
             <EntryCard
               entry={entry}
@@ -88,7 +91,7 @@ export function EntryList({ entries, isLoading, isError, error, onRetry, classNa
               }}
               onDelete={(id) => setDeleteTarget(id)}
             />
-          </button>
+          </div>
         ))}
       </div>
 

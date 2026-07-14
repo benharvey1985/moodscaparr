@@ -19,7 +19,7 @@ The codebase has a solid security foundation — all 22 API routes authenticate 
 | # | Issue | File | Fix |
 |---|-------|------|-----|
 | H1 | User email leaked in GitHub issue URL body | `app/api/feedback/route.ts` | Remove email from feedback body sent to GitHub |
-| H2 | Admin routes not in middleware; page relies on client-side role check | `middleware.ts` + `app/admin/page.tsx` | Add `/admin/:path*` to middleware matcher; add server-side role redirect in admin layout |
+| H2 | Admin routes not in middleware; page relies on client-side role check | ~~`middleware.ts` + `app/admin/page.tsx`~~ | **✅ FIXED in v1.2** — See v1.2 audit for details. Server-side `requireAdmin()` in `app/(app)/admin/layout.tsx` replaces client-side check. |
 
 ### MEDIUM (10)
 
@@ -27,14 +27,14 @@ The codebase has a solid security foundation — all 22 API routes authenticate 
 |---|-------|------|-----|
 | M1 | No `.max(500)` on reflection strings in import schema | `app/api/user/import/route.ts` | Add `.max()` constraints to match create schema |
 | M2 | User input in feedback URL params not sanitized | `app/api/feedback/route.ts` | Strip control characters, add length limits |
-| M3 | No security headers (CSP, X-Frame-Options, HSTS) | `middleware.ts` | Add headers via middleware or next.config.ts |
-| M4 | No Zod validation on admin user update | `app/api/admin/users/[id]/route.ts` | Add Zod schema for role/ban fields |
-| M5 | No Zod validation on invite code creation | `app/api/admin/invite-codes/route.ts` | Add Zod validation for maxUses/expiresAt |
+| M3 | No security headers (CSP, X-Frame-Options, HSTS) | ~~`middleware.ts`~~ | **Partially fixed:** CSP added in `next.config.ts` (v1.2). Still uses `unsafe-inline`/`unsafe-eval`. |
+| M4 | No Zod validation on admin user update | `app/api/admin/users/[id]/route.ts` | **✅ Fixed** — Zod schema present |
+| M5 | No Zod validation on invite code creation | `app/api/admin/invite-codes/route.ts` | **✅ Fixed** — Zod schema present |
 | M6 | CSV formula injection risk | `components/history/csv-export.tsx` | Sanitize values starting with `=`, `+`, `-`, `@` |
 | M7 | No rate limiting anywhere | All API routes | Implement on auth endpoints + data import |
 | M8 | No CSRF protection for cookie-based auth | All API routes | Verify SameSite cookie config; consider CSRF tokens |
-| M9 | No audit trail for sensitive operations | All API routes | Add structured logging for auth/admin events |
-| M10 | No Content-Security-Policy | `middleware.ts` / `next.config.ts` | Add CSP header |
+| M9 | No audit trail for sensitive operations | All API routes | **Partially fixed:** Audit logging added to admin mutation routes (v1.2) |
+| M10 | No Content-Security-Policy | ~~`middleware.ts` / `next.config.ts`~~ | **✅ Fixed** — CSP added in `next.config.ts` (v1.2) |
 
 ### LOW (10)
 
@@ -42,7 +42,7 @@ The codebase has a solid security foundation — all 22 API routes authenticate 
 |---|-------|------|-----|
 | L1 | No explicit session cookie config | `lib/auth.ts` | Explicitly set httpOnly/sameSite/secure |
 | L2 | No DATABASE_URL validation | `lib/prisma.ts` | Add env var check with clear error message |
-| L3 | No Zod validation on SSO toggle | `app/api/admin/sso/route.ts` | Add simple Zod schema |
+| L3 | No Zod validation on SSO toggle | `app/api/admin/sso/route.ts` | **✅ Fixed** — Zod schema present |
 | L4 | Import not wrapped in transaction | `app/api/user/import/route.ts` | Use `prisma.$transaction` |
 | L5 | No max array size on import | `app/api/user/import/route.ts` | Add `z.array().max(1000)` |
 | L6 | Silent error in CSV export catch block | `components/history/csv-export.tsx` | Show error toast |
@@ -63,35 +63,54 @@ The codebase has a solid security foundation — all 22 API routes authenticate 
 
 ## Threat Model Verification
 
-Planned threats from Phase 1 PLAN.md were verified against the implementation:
+Planned threats from v1.2 phase plans (Phases 5–8) verified in `.planning/reports/SECURITY-v1.2.md`:
 
 | Threat ID | Category | Status | Notes |
 |-----------|----------|--------|-------|
-| T-01-01 | Spoofing — Auth login | ✅ Mitigated | Better Auth handles password hashing |
-| T-01-02 | Tampering — Auth middleware | ✅ Mitigated | Session validated on every request |
-| T-01-03 | Repudiation — Registration | ✅ Accepted | Timestamps on user records |
-| T-01-04 | Info Disclosure — Password reset | ✅ Mitigated | Generic success message |
-| T-01-05 | DoS — Auth endpoints | ⚠️ Partial | No explicit rate limiting configured |
-| T-01-06 | Priv Esc — Admin assignment | ✅ Mitigated | databaseHooks correctly limits to first user |
-| T-01-07 | Tampering — Mood entry API | ✅ Mitigated | Zod validation + userId from session + ownership checks |
-| T-01-08 | Info Disclosure — Entry list | ✅ Mitigated | Scoped to session.user.id |
-| T-01-09 | Priv Esc — Edit/Delete | ✅ Mitigated | Ownership verified on every mutation |
-| T-01-10 | Data Loss — Wizard close | ✅ Mitigated | localStorage draft buffer |
-| T-01-11 | DoS — Seed endpoint | ✅ Mitigated | Admin-only access |
-| T-01-12 | Data Loss — Clear seed | ✅ Accepted | Admin-only, logged |
+| T-05-01 | Tampering — Directory names | ✅ CLOSED | Route group parentheses verified |
+| T-05-02 | Tampering — NavItem interface | ✅ CLOSED | TS compile catches type errors |
+| T-06-01 | Auth Bypass — requireAuth() | ✅ CLOSED | Server-side redirect before client code |
+| T-06-02/03 | Spoofing/Info Disclosure — hydrateSession | ✅ N/A | Removed; not in API |
+| T-06-04 | Info Disclosure — session leakage | ✅ CLOSED | No hydrateSession = no vector |
+| T-07-01/04 | Spoofing — old directories | ✅ CLOSED | All 8 old dirs deleted |
+| T-07-02 | Info Disclosure — settings metadata | ✅ CLOSED | No PII |
+| T-07-03 | Priv Esc — Admin page | ✅ CLOSED | Server-side requireAdmin() layout |
+| T-07-05 | Tampering — redundant requireAuth | ✅ CLOSED | Accepted; harmless |
+| T-05/06/07-SC | Tampering — packages | ✅ CLOSED | Zero packages installed |
 
 ---
 
 ## Recommendations (Priority Order)
 
-1. **H1** — Remove email from feedback body in `app/api/feedback/route.ts`
-2. **H2** — Add `/admin/:path*` to middleware matcher + server-side role check
-3. **M4/M5/M3** — Add Zod validation to admin mutation endpoints + security headers
-4. **M6** — Protect CSV export against formula injection
-5. **M7** — Add rate limiting to auth endpoints
-6. **M8/M9** — CSRF protection + audit logging
-7. **L1-L10** — Address low-priority items as convenient
+1. **H1** — Remove email from feedback body in `app/api/feedback/route.ts` (still open)
+2. **M6** — Protect CSV export against formula injection
+3. **M7** — Add rate limiting to auth endpoints
+4. **M8** — CSRF protection
+5. **M3 harden** — Add CSP nonces or tighten script-src in production
+6. **L1-L10** — Address low-priority items as convenient
 
 ---
 
-*Generated: 2026-07-06*
+## v1.2 Audit Addendum
+
+**Date:** 2026-07-14 | **Audit:** `.planning/reports/SECURITY-v1.2.md`
+
+**Key changes verified:**
+- **H2 FIXED:** Admin routes now have server-side `requireAdmin()` guard in `app/(app)/admin/layout.tsx` — replaces client-side `useEffect` role check
+- **M3/M10 FIXED:** CSP headers added to `next.config.ts` (broad, not hardened)
+- **M4/M5/L3 FIXED:** Zod validation added to admin mutation endpoints
+- **M9 PARTIALLY FIXED:** Audit logging added to `/api/admin/users/[id]`, `/api/admin/invite-codes`, `/api/admin/sso`, `/api/admin/settings/[key]`
+
+**Auth architecture (v1.2):**
+- All authenticated pages under `app/(app)/` inherit `requireAuth()` from parent layout
+- Admin pages additionally protected by `requireAdmin()` in nested layout
+- All 8 old flat directories (that would bypass auth) deleted
+- `components/header.tsx` fully removed with zero remaining imports
+- Zero new API endpoints introduced
+- Session handled via `authClient.useSession()` in client components only
+
+**Verdict:** v1.2 introduces zero new vulnerabilities and fixes the critical H2 finding.
+
+---
+
+*Generated: 2026-07-06 | Updated: 2026-07-14 (v1.2 addendum)*
