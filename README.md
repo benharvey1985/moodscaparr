@@ -101,6 +101,7 @@ docker compose up -d
 - **Achievements** — 14 badges across milestone, streak, exploration, and special categories with confetti animations
 - **Admin panel** — user management, SSO provider config, invite codes, dashboard KPIs
 - **Dark mode** — light/dark/system theme toggle
+- **Glassmorphism UI** — frosted glass aesthetic with blurred backdrops and depth layers across all surfaces
 
 ## Tech Stack
 
@@ -128,4 +129,9 @@ docker compose up -d
 
 ## Project Status
 
-v1.1.0 — All core features implemented. Docker deployment complete — self-host with `docker compose up`.
+v1.3 — All core features implemented. Docker deployment complete — self-host with `docker compose up`.
+
+### What's New in Recent Releases
+
+- **v1.3** — Glassmorphism design system: frosted cards, blurred backdrops, depth layers on all surfaces
+- **v1.2** — UI redesign: desktop sidebar, mobile bottom tabs, page migration to `(app)` route group, server-side auth guards
