@@ -13,7 +13,7 @@ export default function AdminError({
   const router = useRouter()
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6">
+    <div className="flex flex-col items-center justify-center gap-4 p-6">
       <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-destructive/10">
         <span className="text-xl">⚠️</span>
       </div>
