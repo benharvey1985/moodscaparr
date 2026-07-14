@@ -161,6 +161,15 @@ All 8 existing app pages now migrated to `app/(app)/` route group:
 
 Ready for Phase 8 cleanup — delete `components/header.tsx`, remove old imports, remove `@base-ui/react`, clean up auth pages in flat `app/auth/`.
 
+## Self-Check: PASSED
+
+- ✅ SUMMARY.md exists at `.planning/phases/07-page-migration/07-02-SUMMARY.md`
+- ✅ All 5 key files created/migrated (`dashboard/page.tsx`, `admin/page.tsx`, `admin/layout.tsx`, `wizard/page.tsx`, `wizard/wizard-edit.tsx`)
+- ✅ All 4 old/deleted files/directories confirmed GONE (`app/dashboard/`, `app/admin/`, `app/wizard/`, `app/(app)/wizard/layout.tsx`)
+- ✅ All 6 commits verified in git history (`fbf88be`, `ed07f19`, `ad9dfe3`, `4ad8abe`, `cbbb2f8`, `269b060`)
+- ✅ Zero Header imports, zero authClient.getSession, zero min-h-screen across all 3 migrated directories
+- ✅ TypeScript compilation passes with zero errors
+
 ---
 
 *Phase: 07-page-migration*
