@@ -1,17 +1,12 @@
 # Moodscaparr
 
-## Current Milestone: v1.3 Glassmorphism Design System
+## Current Milestone: v1.3 Glassmorphism Design System ✓ SHIPPED
 
 **Goal:** Apply frosted glass aesthetic across all UI surfaces — cards, sidebar, dropdowns, entry cards, and overlays.
 
-**Target features:**
-- Glass CSS custom properties and Tailwind v4 theme tokens
-- Semi-transparent card backgrounds with `backdrop-blur`
-- Frosted sidebar, dropdown menus, popovers
-- Depth layering via shadows and z-index
-- Transition from solid-color surfaces to glass aesthetic
+**Result:** All surfaces updated to glass aesthetic. v1.3 shipped 2026-07-14.
 
-**Issue:** [#27](https://github.com/benharvey1985/moodscaparr/issues/27)
+**Issue:** [#27](https://github.com/benharvey1985/moodscaparr/issues/27) — closed
 
 ## What This Is
 
@@ -49,7 +44,7 @@ Make mood tracking effortless enough to do daily, rewarding enough to sustain as
 
 ### Active
 
-- [ ] Glassmorphism design system with frosted cards, blurred backdrops, and depth layers
+(none — v1.3 shipped)
 
 ### Out of Scope
 
