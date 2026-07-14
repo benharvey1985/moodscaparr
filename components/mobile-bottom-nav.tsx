@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 
 const bottomTabs = [
   ...mainNavItems.slice(0, 4),
-  { label: "Profile", href: "/profile", icon: User },
+  { label: "Settings", href: "/settings", icon: User },
 ]
 
 export function MobileBottomNav() {

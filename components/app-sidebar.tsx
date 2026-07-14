@@ -2,6 +2,8 @@
 
 import { usePathname } from "next/navigation"
 import Link from "next/link"
+import { Plus } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { mainNavItems, secondaryNavItems } from "@/lib/navigation"
 import {
   Sidebar,
@@ -33,15 +35,21 @@ export function AppSidebar() {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <Link href="/dashboard">
-                <span className="text-xl font-bold">M</span>
-                <span className="text-base font-semibold">Moodscaparr</span>
-              </Link>
+            <SidebarMenuButton size="lg" render={<Link href="/dashboard" />}>
+              <span className="text-xl font-bold">M</span>
+              <span className="text-base font-semibold">Moodscaparr</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
+      <div className="px-3 py-2">
+        <Link href="/wizard" className="block">
+          <Button variant="default" className="w-full">
+            <Plus className="size-4" />
+            <span>New Entry</span>
+          </Button>
+        </Link>
+      </div>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Main</SidebarGroupLabel>
@@ -50,14 +58,12 @@ export function AppSidebar() {
               {mainNavItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
-                    asChild
+                    render={<Link href={item.href} />}
                     isActive={isActive(item.href)}
                     tooltip={item.label}
                   >
-                    <Link href={item.href}>
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </Link>
+                    <item.icon />
+                    <span>{item.label}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -71,14 +77,12 @@ export function AppSidebar() {
               {secondaryNavItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
-                    asChild
+                    render={<Link href={item.href} />}
                     isActive={isActive(item.href)}
                     tooltip={item.label}
                   >
-                    <Link href={item.href}>
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </Link>
+                    <item.icon />
+                    <span>{item.label}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
