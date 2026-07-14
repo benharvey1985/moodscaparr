@@ -2,12 +2,9 @@
 
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { authClient } from "@/lib/auth-client"
 import { useMoodEntries } from "@/hooks/use-mood-entry"
 import { useStats } from "@/hooks/use-streak"
 import { ErrorBoundary } from "@/components/ui/error-boundary"
-import { DashboardSkeleton } from "@/components/ui/loading-skeleton"
-import { Header } from "@/components/header"
 import { QuickLog } from "@/components/quick-log"
 import { EntryCard } from "@/components/entry-card"
 import { DeleteDialog } from "@/components/delete-dialog"
@@ -21,10 +18,6 @@ import { OnboardingTour } from "@/components/onboarding/onboarding-tour"
 
 function DashboardContent() {
   const router = useRouter()
-  const [session, setSession] = useState<{
-    user: { name?: string | null; email?: string | null; image?: string | null; role?: string }
-  } | null>(null)
-  const [sessionLoading, setSessionLoading] = useState(true)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [showTour, setShowTour] = useState(false)
 
@@ -32,26 +25,13 @@ function DashboardContent() {
   const { data: stats, isLoading: statsLoading } = useStats()
 
   useEffect(() => {
-    authClient.getSession().then((res) => {
-      if (!res?.data) {
-        router.push("/auth/login")
-        return
-      }
-      setSession(res.data as typeof session)
-      setSessionLoading(false)
-    })
-  }, [router])
-
-  useEffect(() => {
-    if (session) {
-      fetch("/api/user/onboarding-complete")
-        .then((res) => res.json())
-        .then((data) => {
-          if (!data.onboardingComplete) setShowTour(true)
-        })
-        .catch(() => {})
-    }
-  }, [session])
+    fetch("/api/user/onboarding-complete")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.onboardingComplete) setShowTour(true)
+      })
+      .catch(() => {})
+  }, [])
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours()
@@ -69,34 +49,13 @@ function DashboardContent() {
   const recentEntries = entries?.slice(0, 5) ?? []
   const kpiEntries = entries ?? []
 
-  if (sessionLoading || (isLoading && !entries)) {
-    return (
-      <div className="flex min-h-screen flex-col">
-        <Header user={null} />
-        <DashboardSkeleton />
-      </div>
-    )
-  }
-
   return (
-    <div className="flex min-h-screen flex-col">
-      <Header
-        user={
-          session
-            ? {
-                name: session.user.name,
-                email: session.user.email,
-                image: session.user.image,
-                role: session.user.role,
-              }
-            : null
-        }
-      />
-      <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 p-6 pb-12">
+    <div>
+      <div className="mx-auto w-full max-w-3xl space-y-6 p-6">
         <div className="flex items-start justify-between">
           <div>
             <h2 className="text-2xl font-semibold">
-              {greeting}, {session?.user?.name || "there"}
+              {greeting}
             </h2>
             <div className="mt-1 flex items-center gap-2">
               {todayEntry ? (
@@ -285,7 +244,7 @@ function DashboardContent() {
           onComplete={() => setShowTour(false)}
           onSkip={() => setShowTour(false)}
         />
-      </main>
+      </div>
     </div>
   )
 }
