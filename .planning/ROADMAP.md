@@ -104,7 +104,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 07-01-PLAN.md — Bulk client-page migration (analytics, calendar, achievements, history, settings)
+- [x] 07-01-PLAN.md — Bulk client-page migration (analytics, calendar, achievements, history, settings)
 - [ ] 07-02-PLAN.md — Special-case page migration (dashboard, admin, wizard)
 
 ### Phase 8: Cleanup
