@@ -1,114 +1,94 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Docker Deployment
-status: Awaiting next milestone
-stopped_at: Phase 4 executed — milestone v1.1 complete
-last_updated: "2026-07-13T20:17:34.512Z"
-last_activity: 2026-07-13 — Milestone v1.1 completed and archived
+milestone: v1.2
+milestone_name: UI Redesign
+status: planning
+stopped_at: Phase 7 planned — 2 plans ready for execution
+last_updated: "2026-07-14T09:30:00.000Z"
+last_activity: 2026-07-14 -- Phase 7 plans created
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 11
-  completed_plans: 11
-  percent: 100
+  total_phases: 3
+  completed_phases: 2
+  total_plans: 5
+  completed_plans: 3
+  percent: 38
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-06)
+See: .planning/PROJECT.md (updated 2026-07-13)
 
 **Core value:** Make mood tracking effortless enough to do daily, rewarding enough to sustain as a habit, and insightful enough to reveal personal emotional patterns.
-**Current focus:** Milestone v1.1 complete — all phases delivered
+**Current focus:** Phase 07 — page-migration
 
 ## Current Position
 
-Phase: Milestone v1.1 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-07-13 — Milestone v1.1 completed and archived
+Phase: 07 — PLANNED (ready to execute)
+Plan: 2 plans in 1 wave
+Status: Phase 7 planned — all 8 pages mapped for migration
+Last activity: 2026-07-14 -- Phase 7 plans created
+
+Progress: █████░░░░░ 25%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 9
-- Average duration: ~1 session per phase
-- Total execution time: ~1 session
+- Total plans completed: 9 (from v1.0 + v1.1)
+- Average duration: Standard
+- Total execution time: N/A
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1. Foundation & Core Diary | 3 | 3 | 1 session |
-| 2. Dashboard, History & Insights | 4 | 4 | 1 session |
-| 3. Gamification, Profile & Admin | 2 | 2 | 1 session |
+| 1. Foundation & Core Diary | v1.0 | 3 | — |
+| 2. Dashboard, History & Insights | v1.0 | 4 | — |
+| 3. Gamification, Profile & Admin | v1.0 | 2 | — |
+| 4. Docker Deployment | v1.1 | 1 | — |
+| 04.1. Address Documentation Gaps | v1.1 | 1 | — |
 
 **Recent Trend:**
 
-- Last 10 plans: 01-01, 01-02, 01-03, 02-01, 02-02, 02-03, 02-04, 03-01, 03-02, 04-01
-- Last activity: Phase 4 executed — Docker deployment stack created
-- Trend: All 4 phases shipped across two sessions
+- Last 5 plans: v1.1 completed
+- Trend: N/A (new milestone)
+
+*Updated after each plan completion*
 
 ## Accumulated Context
 
-### Roadmap Evolution
-
-- Phase 4.1 inserted after Phase 4: Address documentation gaps (URGENT)
-
 ### Decisions
 
-- [Initial]: Coarse granularity roadmap with 3 vertical MVP phases
-- [Initial]: Visual unification tokens (CSS custom properties) must precede any UI work — non-negotiable constraint
-- [Initial]: First registered user is auto-assigned admin role (AUTH-06)
-- [Initial]: Quick Log (≤3 taps) is default logging path; wizard with progressive disclosure reduces context fatigue
-- [2026-07-06]: Prisma 7 requires adapter pattern (@prisma/adapter-pg for local dev, adapter-neon for Neon cloud)
-- [2026-07-06]: Better Auth 1.6 uses databaseHooks instead of afterAuth; admin plugin roles simplified
-- [2026-07-06]: recharts for analytics charts; CSV export is client-side (Blob + download); calendar heatmap is custom CSS grid
-- [2026-07-06]: Onboarding uses UserProfile.onboardingComplete flag; feedback uses GitHub issue URLs via NEXT_PUBLIC_GITHUB_REPO
-- [2026-07-06]: Docker entrypoint uses shell script with explicit error checks (fail-fast on migration errors); seed is separate docker exec step
-- [2026-07-06]: Single .env.example with Docker compose Postgres URL as default; full config with all app env vars; placeholder secret for quick start
-- [2026-07-06]: Docker host port mapped to 8080 to avoid conflict with local dev on port 3000
-- [2026-07-06]: Multi-stage Dockerfile (deps → builder → runner) with Alpine base, non-root node user, HEALTHCHECK, and standalone output
-- [2026-07-06]: docker-compose.yml with app + postgres:16-alpine, named pgdata volume, depends_on with service_healthy condition
-- [2026-07-06]: /api/health endpoint with force-dynamic, returns 200/503 with DB connectivity status
-- [2026-07-06]: .dockerignore excludes node_modules, .next, .env*, .git, .planning for lean build context
+Decisions are logged in PROJECT.md Key Decisions table.
+Recent decisions affecting current work:
+
+- [v1.2]: Glassmorphism deferred — layout + navigation structure first
+- [v1.2]: Breakpoint at 1024px (Tailwind `lg:`) for sidebar/bottom-tab switching (per research)
+- [v1.2]: 5 bottom tabs: Dashboard, History, Analytics, Achievements, Profile — Settings in avatar dropdown
+- [v1.2]: shadcn Sidebar (official) for desktop sidebar, custom MobileBottomNav (~50 lines)
+- [v1.2]: SidebarProvider MUST go in root `app/layout.tsx`, not `(app)/layout.tsx`
 
 ### Pending Todos
 
-- [low] Fix middleware → proxy deprecation warning (Next.js 16 migration)
-- [low] Add email sending for password reset flow (requires email-otp plugin or external provider)
+None yet.
 
 ### Blockers/Concerns
 
-- (none — Docker milestone completed; Postgres is now containerized alongside the app)
+None yet.
+
+## Deferred Items
+
+Items acknowledged and carried forward from previous milestone close:
+
+| Category | Item | Status | Deferred At |
+|----------|------|--------|-------------|
+| Polish | Glassmorphism/frosted design system | Deferred to v1.3+ | 2026-07-14 |
+| Tech debt | Middleware proxy deprecation warning | Low priority | v1.1 ship |
 
 ## Session Continuity
 
-Last session: 2026-07-06
-Stopped at: Phase 4 executed — milestone v1.1 complete
-Resume file: none (all phases complete)
-
-Milestone report: `.planning/reports/MILESTONE_SUMMARY-v1.md`
-
-## Quick Start
-
-```bash
-
-# Development (existing)
-
-npm run dev
-
-# Docker self-hosting
-
-docker compose up -d
-
-# Visit http://localhost:3000
-
-```
-
-## Operator Next Steps
-
-- Start the next milestone with /gsd-new-milestone
+Last session: 2026-07-14
+Stopped at: Roadmap draft created for v1.2 milestone
+Resume file: None
