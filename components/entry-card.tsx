@@ -27,7 +27,7 @@ export function EntryCard({ entry, onEdit, onDelete }: EntryCardProps) {
   return (
     <div
       className={cn(
-        "flex items-center gap-4 rounded-xl border border-l-4 bg-card p-4",
+        "flex items-center gap-4 rounded-xl border border-l-4 bg-glass p-4 backdrop-blur-md",
         borderColor
       )}
     >

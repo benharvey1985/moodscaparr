@@ -9,6 +9,7 @@ Phase 1–3 built the full MVP: auth, mood diary, dashboard, history, analytics,
 - ✅ **v1.0 MVP** — Phases 1-3 (shipped 2026-07-06)
 - ✅ **v1.1 Docker Deployment** — Phase 4, 4.1 (shipped 2026-07-13)
 - ✅ **v1.2 UI Redesign** — Phases 5-8 (shipped 2026-07-14)
+- 🚧 **v1.3 Glassmorphism Design System** — Phase 9 (active)
 - 📋 **v2.0** — Planned
 
 ## Phases
@@ -40,9 +41,15 @@ Phase 1–3 built the full MVP: auth, mood diary, dashboard, history, analytics,
 
 </details>
 
+### 🚧 v1.3 Glassmorphism Design System (Active)
+
+**Goal:** Apply frosted glass aesthetic across all UI surfaces — cards, sidebar, dropdowns, entry cards, and overlays.
+
+- [ ] Phase 9: Glassmorphism Design System — CSS tokens, card/surface styling, backdrop-blur, depth layering
+
 ### 📋 v2.0 (Planned)
 
-- [ ] Phase 9+: TBD
+- [ ] Phase 10+: TBD
 
 ## Phase Details
 

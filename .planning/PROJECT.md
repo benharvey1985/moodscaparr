@@ -1,15 +1,17 @@
 # Moodscaparr
 
-## Current Milestone: v1.2 UI Redesign
+## Current Milestone: v1.3 Glassmorphism Design System
 
-**Goal:** Modernize Moodscaparr's UI with a glassmorphism/frosted aesthetic, full site-wide layout refresh, and restructured navigation (sidebar + mobile bottom tabs).
+**Goal:** Apply frosted glass aesthetic across all UI surfaces — cards, sidebar, dropdowns, entry cards, and overlays.
 
 **Target features:**
-- Glassmorphism/frosted design system (translucent cards, blurred backdrops, depth layers)
-- Full site-wide layout restructure with new spacing hierarchy
-- Desktop sidebar navigation replacing top nav
-- Mobile bottom tab bar for touch navigation
-- Responsive redesign across all pages (dashboard, wizard, history, analytics, profile, admin)
+- Glass CSS custom properties and Tailwind v4 theme tokens
+- Semi-transparent card backgrounds with `backdrop-blur`
+- Frosted sidebar, dropdown menus, popovers
+- Depth layering via shadows and z-index
+- Transition from solid-color surfaces to glass aesthetic
+
+**Issue:** [#27](https://github.com/benharvey1985/moodscaparr/issues/27)
 
 ## What This Is
 
@@ -40,14 +42,14 @@ Make mood tracking effortless enough to do daily, rewarding enough to sustain as
 - ✓ /api/health endpoint (200/503 with DB connectivity) (v1.1)
 - ✓ .env.example + README with full Docker setup guide (v1.1)
 - ✓ .dockerignore for lean build context (v1.1)
+- ✓ Desktop sidebar navigation with icon + label links (v1.2)
+- ✓ Mobile bottom tab bar navigation (v1.2)
+- ✓ Full site-wide layout restructure (all pages) (v1.2)
+- ✓ Responsive layout with consistent spacing hierarchy (v1.2)
 
 ### Active
 
 - [ ] Glassmorphism design system with frosted cards, blurred backdrops, and depth layers
-- [ ] Desktop sidebar navigation with icon + label links
-- [ ] Mobile bottom tab bar navigation
-- [ ] Full site-wide layout restructure (all pages)
-- [ ] Responsive layout with consistent spacing hierarchy
 
 ### Out of Scope
 
