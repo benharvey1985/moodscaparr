@@ -34,7 +34,7 @@ Phase 1–3 built the full MVP: auth, mood diary, dashboard, history, analytics,
 
 - [x] **Phase 5: Foundation** — Route groups & nav config module (completed 2026-07-14)
 - [x] **Phase 6: Layout Shell & Session** — Sidebar, bottom tabs, responsive layout, session provider (completed 2026-07-14)
-- [ ] **Phase 7: Page Migration** — All 7+ pages migrated to new layout
+- [x] **Phase 7: Page Migration** — All 7+ pages migrated to new layout (completed 2026-07-14)
 - [ ] **Phase 8: Cleanup** — Delete old files, remove unused dependencies
 
 ### 📋 v2.0 (Planned)
@@ -105,7 +105,7 @@ Plans:
 **Wave 1**
 
 - [x] 07-01-PLAN.md — Bulk client-page migration (analytics, calendar, achievements, history, settings)
-- [ ] 07-02-PLAN.md — Special-case page migration (dashboard, admin, wizard)
+- [x] 07-02-PLAN.md — Special-case page migration (dashboard, admin, wizard)
 
 ### Phase 8: Cleanup
 
@@ -132,5 +132,5 @@ Plans:
 | 04.1. Address Documentation Gaps | v1.1 | 1/1 | ✅ Complete | 2026-07-13 |
 | 5. Foundation | v1.2 | 1/1 | Complete   | 2026-07-14 |
 | 6. Layout Shell & Session | v1.2 | 2/2 | Complete   | 2026-07-14 |
-| 7. Page Migration | v1.2 | 0/2 | Not started | - |
+| 7. Page Migration | v1.2 | 2/2 | Complete   | 2026-07-14 |
 | 8. Cleanup | v1.2 | 0/0 | Not started | - |
