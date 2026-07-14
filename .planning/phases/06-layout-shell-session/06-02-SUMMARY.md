@@ -152,5 +152,16 @@ None - no external service configuration required.
 
 ---
 
+## Self-Check: PASSED
+
+- All 4 created files exist on disk ✓
+- All 3 commits found in git log ✓
+- TypeScript compiles with zero errors ✓
+- header.tsx not modified ✓
+- SidebarProvider appears in root layout only (not duplicated) ✓
+- (app)/layout.tsx is a server component (no "use client") ✓
+
+---
+
 *Phase: 06-layout-shell-session*
 *Completed: 2026-07-14*
