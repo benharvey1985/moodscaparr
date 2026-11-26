@@ -4,7 +4,16 @@ import { headers } from "next/headers"
 import { prisma } from "@/lib/prisma"
 import { computeStreak, getAverageMoodScore, getMoodBalance } from "@/lib/stats"
 import { MOODS } from "@/types/mood"
-import { subDays, startOfDay } from "date-fns"
+import { dateRangeStart, isValidTimeZone, parseDateOnly } from "@/lib/dates"
+import { serializeMoodEntry } from "@/lib/mood-validation"
+import { analyticsDateFilter } from "@/lib/api/analytics"
+
+const RANGES = new Set(["7d", "30d", "90d", "all"])
+
+function average(values: number[]): number | null {
+  if (values.length === 0) return null
+  return Math.round((values.reduce((sum, value) => sum + value, 0) / values.length) * 10) / 10
+}
 
 export async function GET(request: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -13,81 +22,47 @@ export async function GET(request: NextRequest) {
   }
 
   const range = request.nextUrl.searchParams.get("range") || "30d"
+  if (!RANGES.has(range)) {
+    return NextResponse.json({ error: "Invalid analytics range" }, { status: 400 })
+  }
 
   const profile = await prisma.userProfile.findUnique({
     where: { id: session.user.id },
+    select: { timezone: true },
   })
-  const timezone = profile?.timezone ?? "UTC"
+  const timezone = isValidTimeZone(profile?.timezone) ? profile.timezone : "UTC"
+  const rangeStart = range === "all" ? null : dateRangeStart(range, timezone)
 
-  let dateFilter: Date | undefined
-  const now = new Date()
-
-  switch (range) {
-    case "7d":
-      dateFilter = startOfDay(subDays(now, 7))
-      break
-    case "30d":
-      dateFilter = startOfDay(subDays(now, 30))
-      break
-    case "90d":
-      dateFilter = startOfDay(subDays(now, 90))
-      break
-  }
-
-  const entries = await prisma.moodEntry.findMany({
+  const records = await prisma.moodEntry.findMany({
     where: {
       userId: session.user.id,
-      ...(dateFilter ? { date: { gte: dateFilter } } : {}),
+      ...analyticsDateFilter(rangeStart),
     },
-    orderBy: { date: "desc" },
+    orderBy: [{ localDate: "desc" }, { date: "desc" }],
   })
+  const entries = records.map(serializeMoodEntry)
 
-  const streak = computeStreak(entries, timezone)
+  const streak = computeStreak(
+    entries.map((entry) => ({ date: parseDateOnly(entry.localDate) })),
+    "UTC"
+  )
   const avgMoodScore = getAverageMoodScore(entries)
   const moodBalance = getMoodBalance(entries)
 
-  function getMood(category: string, moodIndex: number): { emoji: string; label: string } | undefined {
-    const cat = category as keyof typeof MOODS
-    const moods = MOODS[cat]
-    if (!moods) return undefined
-    return moods[moodIndex]
-  }
-
   const freqMap = new Map<string, { label: string; emoji: string; count: number }>()
   for (const entry of entries) {
-    const mood = getMood(entry.category, entry.moodIndex)
+    const mood = MOODS[entry.category]?.[entry.moodIndex]
     if (!mood) continue
     const key = `${entry.category}-${entry.moodIndex}`
     const existing = freqMap.get(key)
-    if (existing) {
-      existing.count++
-    } else {
-      freqMap.set(key, { label: mood.label, emoji: mood.emoji, count: 1 })
-    }
+    if (existing) existing.count++
+    else freqMap.set(key, { label: mood.label, emoji: mood.emoji, count: 1 })
   }
   const moodFrequency = Array.from(freqMap.values()).sort((a, b) => b.count - a.count)
 
-  const withEnergy = entries.filter((e) => e.energyLevel !== null)
-  const withStress = entries.filter((e) => e.stressLevel !== null)
-  const withSleepHours = entries.filter((e) => e.sleepHours !== null)
-
-  const avgEnergy = withEnergy.length
-    ? Math.round(
-        (withEnergy.reduce((s, e) => s + (e.energyLevel ?? 0), 0) / withEnergy.length) * 10
-      ) / 10
-    : 0
-
-  const avgStress = withStress.length
-    ? Math.round(
-        (withStress.reduce((s, e) => s + (e.stressLevel ?? 0), 0) / withStress.length) * 10
-      ) / 10
-    : 0
-
-  const avgSleepHours = withSleepHours.length
-    ? Math.round(
-        (withSleepHours.reduce((s, e) => s + (e.sleepHours ?? 0), 0) / withSleepHours.length) * 10
-      ) / 10
-    : 0
+  const energyValues = entries.flatMap((entry) => entry.energyLevel === null ? [] : [entry.energyLevel])
+  const stressValues = entries.flatMap((entry) => entry.stressLevel === null ? [] : [entry.stressLevel])
+  const sleepValues = entries.flatMap((entry) => entry.sleepHours === null ? [] : [entry.sleepHours])
 
   function scoreEntry(entry: { category: string; intensity: number }): number {
     if (entry.category === "POSITIVE") return entry.intensity
@@ -103,16 +78,16 @@ export async function GET(request: NextRequest) {
     let worstScore = Infinity
     for (const entry of entries) {
       const score = scoreEntry(entry)
-      const mood = getMood(entry.category, entry.moodIndex)
+      const mood = MOODS[entry.category]?.[entry.moodIndex]
       if (!mood) continue
 
       if (score > bestScore) {
         bestScore = score
-        bestDay = { date: entry.date.toISOString().split("T")[0], mood }
+        bestDay = { date: entry.localDate, mood }
       }
       if (score < worstScore) {
         worstScore = score
-        worstDay = { date: entry.date.toISOString().split("T")[0], mood }
+        worstDay = { date: entry.localDate, mood }
       }
     }
   }
@@ -128,9 +103,14 @@ export async function GET(request: NextRequest) {
       worstDay,
       moodBalance,
       moodFrequency,
-      avgEnergy,
-      avgStress,
-      avgSleepHours,
+      avgEnergy: average(energyValues),
+      avgStress: average(stressValues),
+      avgSleepHours: average(sleepValues),
+      metricCounts: {
+        energy: energyValues.length,
+        stress: stressValues.length,
+        sleep: sleepValues.length,
+      },
     },
   })
 }

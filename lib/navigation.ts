@@ -29,3 +29,7 @@ export const secondaryNavItems: NavItem[] = [
   { label: "Settings", href: "/settings", icon: Settings },
   { label: "Admin", href: "/admin", icon: Shield, adminOnly: true },
 ]
+
+export function isNavItemActive(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`)
+}

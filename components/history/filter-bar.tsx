@@ -1,7 +1,7 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import type { MoodCategory } from "@/types/mood"
 
 interface FilterBarProps {
   selected: string | null
@@ -11,30 +11,31 @@ interface FilterBarProps {
 
 const filters = [
   { value: null, label: "All" },
-  { value: "POSITIVE", label: "😊 Positive", color: "text-[var(--color-mood-positive-medium)]" },
-  { value: "NEUTRAL", label: "🧘 Neutral", color: "text-[var(--color-mood-neutral-medium)]" },
-  { value: "NEGATIVE", label: "😢 Negative", color: "text-[var(--color-mood-negative-medium)]" },
+  { value: "POSITIVE", label: "😊 Positive", color: "text-mood-positive-medium" },
+  { value: "NEUTRAL", label: "🧘 Neutral", color: "text-mood-neutral-medium" },
+  { value: "NEGATIVE", label: "😢 Negative", color: "text-mood-negative-medium" },
 ]
 
 export function FilterBar({ selected, onSelect, className }: FilterBarProps) {
   return (
-    <div className={cn("flex flex-wrap gap-2", className)}>
-      {filters.map((f) => {
-        const isActive = selected === f.value
+    <div className={cn("flex flex-wrap gap-2", className)} aria-label="Filter entries by mood category">
+      {filters.map((filter) => {
+        const isActive = selected === filter.value
         return (
-          <button
-            key={f.value ?? "all"}
-            onClick={() => onSelect(f.value)}
+          <Button
+            key={filter.value ?? "all"}
+            type="button"
+            variant="outline"
             className={cn(
-              "inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-all",
-              isActive
-                ? "border-current bg-muted shadow-sm"
-                : "border-border bg-background text-muted-foreground hover:text-foreground",
-              isActive && f.color
+              "min-h-11",
+              isActive && "border-current bg-muted shadow-sm",
+              isActive && filter.color
             )}
+            aria-pressed={isActive}
+            onClick={() => onSelect(filter.value)}
           >
-            {f.label}
-          </button>
+            {filter.label}
+          </Button>
         )
       })}
     </div>

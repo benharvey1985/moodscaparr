@@ -1,7 +1,7 @@
 "use client"
 
-import * as React from "react"
 import { X } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 const variants = {
@@ -21,14 +21,21 @@ function Toast({ id, message, variant = "default", onDismiss }: ToastProps) {
   return (
     <div
       className={cn(
-        "flex items-center gap-2 rounded-lg border px-4 py-3 text-sm shadow-lg animate-in slide-in-from-top-2",
+        "pointer-events-auto flex w-full max-w-sm items-center gap-2 rounded-lg border px-4 py-3 text-sm shadow-lg animate-in slide-in-from-top-2 motion-reduce:animate-none",
         variants[variant]
       )}
     >
       <span className="flex-1">{message}</span>
-      <button onClick={() => onDismiss(id)} className="shrink-0 opacity-60 hover:opacity-100">
-        <X className="size-3.5" />
-      </button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        aria-label={`Dismiss notification: ${message}`}
+        onClick={() => onDismiss(id)}
+        className="-mr-2 shrink-0 opacity-70 hover:opacity-100 max-lg:size-11"
+      >
+        <X className="size-3.5" aria-hidden="true" />
+      </Button>
     </div>
   )
 }

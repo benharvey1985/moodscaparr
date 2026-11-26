@@ -1,31 +1,19 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, type ReactNode } from "react"
+import { Brain, Frown, Heart, MessageSquare, Sparkles } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { MessageSquare, Sparkles, Frown, Heart, Brain } from "lucide-react"
-import { format } from "date-fns"
-import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { formatLocalDate } from "@/lib/dates"
 import type { MoodEntry } from "@/types/mood"
+import {
+  REFLECTION_PROMPTS,
+  type ReflectionPromptKey,
+} from "@/components/history/reflection-prompts"
 
 interface ReflectionsTabProps {
   entries: MoodEntry[] | undefined
 }
-
-const PROMPT_LABELS = {
-  reflection1: "What went well?",
-  reflection2: "What was challenging?",
-  reflection3: "What are you grateful for?",
-  reflection4: "What's on your mind?",
-} as const
-
-const PROMPT_ICONS: Record<string, React.ReactNode> = {
-  reflection1: <Sparkles className="size-4" />,
-  reflection2: <Frown className="size-4" />,
-  reflection3: <Heart className="size-4" />,
-  reflection4: <Brain className="size-4" />,
-}
-
-type PromptKey = keyof typeof PROMPT_LABELS
 
 interface ReflectionItem {
   id: string
@@ -33,7 +21,16 @@ interface ReflectionItem {
   response: string
 }
 
-const FILTERS: Array<{ key: PromptKey | "all"; label: string; icon: React.ReactNode }> = [
+const PAGE_SIZE = 20
+
+const PROMPT_ICONS: Record<ReflectionPromptKey, ReactNode> = {
+  reflection1: <Sparkles className="size-4" />,
+  reflection2: <Frown className="size-4" />,
+  reflection3: <Heart className="size-4" />,
+  reflection4: <Brain className="size-4" />,
+}
+
+const FILTERS: Array<{ key: ReflectionPromptKey | "all"; label: string; icon: ReactNode }> = [
   { key: "all", label: "All", icon: <MessageSquare className="size-4" /> },
   { key: "reflection1", label: "Went well", icon: <Sparkles className="size-4" /> },
   { key: "reflection2", label: "Challenging", icon: <Frown className="size-4" /> },
@@ -41,43 +38,46 @@ const FILTERS: Array<{ key: PromptKey | "all"; label: string; icon: React.ReactN
   { key: "reflection4", label: "On my mind", icon: <Brain className="size-4" /> },
 ]
 
+function groupReflections(entries: MoodEntry[]): Record<ReflectionPromptKey, ReflectionItem[]> {
+  const groups: Record<ReflectionPromptKey, ReflectionItem[]> = {
+    reflection1: [],
+    reflection2: [],
+    reflection3: [],
+    reflection4: [],
+  }
+
+  for (const entry of entries) {
+    for (const { key } of REFLECTION_PROMPTS) {
+      const response = entry[key]
+      if (!response) continue
+      groups[key].push({
+        id: `${entry.id}-${key}`,
+        date: entry.localDate,
+        response,
+      })
+    }
+  }
+
+  return groups
+}
+
 export function ReflectionsTab({ entries }: ReflectionsTabProps) {
-  const [filter, setFilter] = useState<PromptKey | "all">("all")
-
-  const grouped = useMemo(() => {
-    const groups: Record<string, ReflectionItem[]> = {
-      reflection1: [],
-      reflection2: [],
-      reflection3: [],
-      reflection4: [],
-    }
-
-    if (!entries || entries.length === 0) return groups
-
-    for (const entry of entries.slice(0, 20)) {
-      const fields: PromptKey[] = ["reflection1", "reflection2", "reflection3", "reflection4"]
-      for (const field of fields) {
-        const val = entry[field]
-        if (val) {
-          groups[field].push({
-            id: `${entry.id}-${field}`,
-            date: entry.date,
-            response: val,
-          })
-        }
-      }
-    }
-
-    return groups
-  }, [entries])
-
-  const hasAny = Object.values(grouped).some((g) => g.length > 0)
+  const [filter, setFilter] = useState<ReflectionPromptKey | "all">("all")
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  const allEntries = useMemo(() => entries ?? [], [entries])
+  const hasAny = allEntries.some((entry) => REFLECTION_PROMPTS.some(({ key }) => entry[key]))
+  const grouped = useMemo(
+    () => groupReflections(allEntries.slice(0, visibleCount)),
+    [allEntries, visibleCount]
+  )
+  const visibleHasAny = REFLECTION_PROMPTS.some(({ key }) => grouped[key].length > 0)
+  const hasMore = visibleCount < allEntries.length
 
   if (!hasAny) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-20 text-center">
         <MessageSquare className="mb-3 size-10 text-muted-foreground" />
-        <h3 className="text-lg font-semibold">No reflections recorded yet</h3>
+        <h2 className="text-lg font-semibold">No reflections recorded yet</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Add reflections when logging your mood to see them here.
         </p>
@@ -87,27 +87,34 @@ export function ReflectionsTab({ entries }: ReflectionsTabProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter reflections by prompt">
         {FILTERS.map(({ key, label, icon }) => (
-          <button
+          <Button
             key={key}
             type="button"
+            variant={filter === key ? "default" : "outline"}
+            className="min-h-11"
+            aria-pressed={filter === key}
             onClick={() => setFilter(key)}
-            className={cn(
-              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors",
-              filter === key
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-            )}
           >
             {icon}
             {label}
-          </button>
+          </Button>
         ))}
       </div>
 
+      <p className="text-xs text-muted-foreground" aria-live="polite">
+        Showing reflections from {Math.min(visibleCount, allEntries.length)} of {allEntries.length} entries, 20 entries at a time.
+      </p>
+
+      {!visibleHasAny && (
+        <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+          No reflections in the loaded entries for this filter.
+        </div>
+      )}
+
       <div className="space-y-8">
-        {(Object.entries(PROMPT_LABELS) as [PromptKey, string][]).map(([key, label]) => {
+        {REFLECTION_PROMPTS.map(({ key, label }) => {
           if (filter !== "all" && filter !== key) return null
           const items = grouped[key]
           if (items.length === 0) return null
@@ -118,7 +125,7 @@ export function ReflectionsTab({ entries }: ReflectionsTabProps) {
                 <div className="flex size-7 items-center justify-center rounded-md bg-muted text-muted-foreground">
                   {PROMPT_ICONS[key]}
                 </div>
-                <h3 className="font-semibold">{label}</h3>
+                <h2 className="font-semibold">{label}</h2>
                 <span className="text-xs text-muted-foreground">{items.length}</span>
               </div>
               <div className="space-y-2">
@@ -127,7 +134,7 @@ export function ReflectionsTab({ entries }: ReflectionsTabProps) {
                     <CardHeader className="py-3">
                       <CardTitle className="flex items-center justify-between">
                         <span className="text-xs tabular-nums text-muted-foreground">
-                          {format(new Date(item.date), "MMM d, yyyy")}
+                          {formatLocalDate(item.date, { month: "short", day: "numeric", year: "numeric" })}
                         </span>
                       </CardTitle>
                     </CardHeader>
@@ -141,6 +148,12 @@ export function ReflectionsTab({ entries }: ReflectionsTabProps) {
           )
         })}
       </div>
+
+      {hasMore && (
+        <Button variant="outline" className="min-h-11" onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}>
+          Load More Entries
+        </Button>
+      )}
     </div>
   )
 }

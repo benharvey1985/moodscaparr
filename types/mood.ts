@@ -34,6 +34,9 @@ export interface MoodEntry {
   category: MoodCategory
   moodIndex: number
   intensity: number
+  /** Authoritative user-local calendar date (YYYY-MM-DD). */
+  localDate: string
+  /** Noon-UTC compatibility instant derived from localDate. */
   date: string
   activities: string[]
   weather: string | null
@@ -53,20 +56,22 @@ export interface CreateMoodEntryInput {
   category: MoodCategory
   moodIndex: number
   intensity: number
-  date: string
+  localDate: string
   activities?: string[]
-  weather?: string
-  sleepHours?: number
-  sleepQuality?: string
-  energyLevel?: number
-  stressLevel?: number
-  reflection1?: string
-  reflection2?: string
-  reflection3?: string
-  reflection4?: string
+  weather?: string | null
+  sleepHours?: number | null
+  sleepQuality?: string | null
+  energyLevel?: number | null
+  stressLevel?: number | null
+  reflection1?: string | null
+  reflection2?: string | null
+  reflection3?: string | null
+  reflection4?: string | null
 }
 
-export type UpdateMoodEntryInput = Partial<CreateMoodEntryInput>
+export type UpdateMoodEntryInput = Partial<Omit<CreateMoodEntryInput, "localDate">> & {
+  localDate: string
+}
 
 export const ACTIVITIES = [
   "Work",

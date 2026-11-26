@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { prisma } from "@/lib/prisma"
 import { subDays, startOfMonth } from "date-fns"
+import { readPasswordResetHealth } from "@/lib/password-reset-health"
 
 export async function GET() {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -12,7 +13,7 @@ export async function GET() {
 
   const thirtyDaysAgo = subDays(new Date(), 30)
 
-  const [totalUsers, activeUsers, totalEntries, allEntries, profileCount] = await Promise.all([
+  const [totalUsers, activeUsers, totalEntries, allEntries, passwordResetHealth] = await Promise.all([
     prisma.user.count(),
     prisma.moodEntry.groupBy({
       by: ["userId"],
@@ -20,7 +21,7 @@ export async function GET() {
     }),
     prisma.moodEntry.count(),
     prisma.moodEntry.findMany({ select: { category: true, userId: true } }),
-    prisma.userProfile.count(),
+    readPasswordResetHealth(),
   ])
 
   const profileStreaks = await prisma.userProfile.findMany({
@@ -68,5 +69,6 @@ export async function GET() {
       count: monthCounts[i],
     })),
     moodDistribution,
+    passwordResetHealth,
   })
 }

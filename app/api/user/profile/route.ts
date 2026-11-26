@@ -3,11 +3,12 @@ import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import { isValidTimeZone } from "@/lib/dates"
 
 const updateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   country: z.string().max(100).optional(),
-  timezone: z.string().max(64).optional(),
+  timezone: z.string().max(64).refine(isValidTimeZone, "Invalid IANA timezone").optional(),
   streakGoal: z.number().int().min(1).max(365).optional(),
 })
 

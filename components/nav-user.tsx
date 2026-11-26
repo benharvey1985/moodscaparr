@@ -1,7 +1,9 @@
 "use client"
 
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { authClient } from "@/lib/auth-client"
+import { clearUserScopedData } from "@/lib/session-cleanup"
 import { useSidebar } from "@/components/ui/sidebar"
 import {
   SidebarMenu,
@@ -18,12 +20,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useToast } from "@/components/ui/toaster"
 import { ChevronsUpDown, LogOut, Settings, Shield } from "lucide-react"
 
 export function NavUser() {
   const router = useRouter()
   const { isMobile } = useSidebar()
+  const { addToast } = useToast()
   const { data: session, isPending } = authClient.useSession()
+  const [signingOut, setSigningOut] = useState(false)
+  const [signOutError, setSignOutError] = useState<string | null>(null)
 
   if (isPending || !session?.user) return null
 
@@ -39,8 +45,26 @@ export function NavUser() {
     : "U"
 
   async function handleSignOut() {
-    await authClient.signOut()
-    router.push("/auth/login")
+    const userId = user.id
+    setSigningOut(true)
+    setSignOutError(null)
+    try {
+      const { error } = await authClient.signOut()
+      if (error) throw new Error(error.message || "Unable to sign out")
+
+      clearUserScopedData(userId)
+      router.push("/auth/login")
+      router.refresh()
+    } catch {
+      const message = "Could not sign out. Check your connection and retry. Local cached data was cleared."
+      setSignOutError(message)
+      addToast({ message, variant: "error" })
+    } finally {
+      // Also clear on an ambiguous network failure: the server may have revoked
+      // the session even though its response never reached the browser.
+      clearUserScopedData(userId)
+      setSigningOut(false)
+    }
   }
 
   return (
@@ -111,10 +135,19 @@ export function NavUser() {
               )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
+            {signOutError && (
+              <p role="alert" className="px-2 py-1.5 text-xs text-destructive">
+                {signOutError}
+              </p>
+            )}
             <DropdownMenuGroup>
-              <DropdownMenuItem variant="destructive" onClick={handleSignOut}>
+              <DropdownMenuItem
+                variant="destructive"
+                disabled={signingOut}
+                onClick={() => void handleSignOut()}
+              >
                 <LogOut className="size-4" />
-                Log out
+                {signingOut ? "Signing out..." : "Log out"}
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuContent>

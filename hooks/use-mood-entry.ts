@@ -7,21 +7,34 @@ import {
   updateMoodEntry,
   deleteMoodEntry,
 } from "@/lib/api/mood-entries"
-import type { MoodEntry, CreateMoodEntryInput, UpdateMoodEntryInput } from "@/types/mood"
+import { parseDateOnly } from "@/lib/dates"
+import type { MoodEntry, UpdateMoodEntryInput } from "@/types/mood"
 
 export const moodKeys = {
   all: ["mood-entries"] as const,
   byDate: (date: string) => ["mood-entries", "date", date] as const,
-  byRange: (from: string, to: string) =>
-    ["mood-entries", "range", from, to] as const,
+  byRange: (from: string, to: string) => ["mood-entries", "range", from, to] as const,
   latest: () => ["mood-entries", "latest"] as const,
 }
 
+const dateDependentQueries = [
+  ["history"],
+  ["stats"],
+  ["streak"],
+  ["analytics"],
+  ["calendar"],
+  ["achievements"],
+] as const
+
+function invalidateDateDependentQueries(queryClient: ReturnType<typeof useQueryClient>) {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: moodKeys.all }),
+    ...dateDependentQueries.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+  ])
+}
+
 export function useMoodEntries() {
-  return useQuery({
-    queryKey: moodKeys.all,
-    queryFn: fetchMoodEntries,
-  })
+  return useQuery({ queryKey: moodKeys.all, queryFn: fetchMoodEntries })
 }
 
 export function useCreateMoodEntry() {
@@ -32,12 +45,14 @@ export function useCreateMoodEntry() {
     onMutate: async (newEntry) => {
       await queryClient.cancelQueries({ queryKey: moodKeys.all })
       const previous = queryClient.getQueryData<MoodEntry[]>(moodKeys.all)
+      const timestamp = new Date().toISOString()
 
       queryClient.setQueryData<MoodEntry[]>(moodKeys.all, (old) => {
         const optimisticEntry: MoodEntry = {
           id: `temp-${crypto.randomUUID()}`,
           userId: "",
           ...newEntry,
+          date: parseDateOnly(newEntry.localDate).toISOString(),
           activities: newEntry.activities ?? [],
           weather: newEntry.weather ?? null,
           sleepHours: newEntry.sleepHours ?? null,
@@ -48,24 +63,17 @@ export function useCreateMoodEntry() {
           reflection2: newEntry.reflection2 ?? null,
           reflection3: newEntry.reflection3 ?? null,
           reflection4: newEntry.reflection4 ?? null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          createdAt: timestamp,
+          updatedAt: timestamp,
         }
         return old ? [optimisticEntry, ...old] : [optimisticEntry]
       })
-
       return { previous }
     },
-    onError: (_err, _newEntry, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(moodKeys.all, context.previous)
-      }
+    onError: (_error, _newEntry, context) => {
+      if (context?.previous) queryClient.setQueryData(moodKeys.all, context.previous)
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: moodKeys.all })
-      queryClient.invalidateQueries({ queryKey: ["stats"] })
-      queryClient.invalidateQueries({ queryKey: ["history"] })
-    },
+    onSettled: () => invalidateDateDependentQueries(queryClient),
   })
 }
 
@@ -73,30 +81,22 @@ export function useUpdateMoodEntry() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateMoodEntryInput }) =>
-      updateMoodEntry(id, data),
+    mutationFn: ({ id, data }: { id: string; data: UpdateMoodEntryInput }) => updateMoodEntry(id, data),
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: moodKeys.all })
       const previous = queryClient.getQueryData<MoodEntry[]>(moodKeys.all)
-
       queryClient.setQueryData<MoodEntry[]>(moodKeys.all, (old) =>
-        old?.map((entry) =>
-          entry.id === id ? { ...entry, ...data } : entry
+        old?.map((entry) => entry.id === id
+          ? { ...entry, ...data, date: parseDateOnly(data.localDate).toISOString() }
+          : entry
         )
       )
-
       return { previous }
     },
-    onError: (_err, _vars, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(moodKeys.all, context.previous)
-      }
+    onError: (_error, _variables, context) => {
+      if (context?.previous) queryClient.setQueryData(moodKeys.all, context.previous)
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: moodKeys.all })
-      queryClient.invalidateQueries({ queryKey: ["stats"] })
-      queryClient.invalidateQueries({ queryKey: ["history"] })
-    },
+    onSettled: () => invalidateDateDependentQueries(queryClient),
   })
 }
 
@@ -108,22 +108,12 @@ export function useDeleteMoodEntry() {
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: moodKeys.all })
       const previous = queryClient.getQueryData<MoodEntry[]>(moodKeys.all)
-
-      queryClient.setQueryData<MoodEntry[]>(moodKeys.all, (old) =>
-        old?.filter((entry) => entry.id !== id)
-      )
-
+      queryClient.setQueryData<MoodEntry[]>(moodKeys.all, (old) => old?.filter((entry) => entry.id !== id))
       return { previous }
     },
-    onError: (_err, _id, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(moodKeys.all, context.previous)
-      }
+    onError: (_error, _id, context) => {
+      if (context?.previous) queryClient.setQueryData(moodKeys.all, context.previous)
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: moodKeys.all })
-      queryClient.invalidateQueries({ queryKey: ["stats"] })
-      queryClient.invalidateQueries({ queryKey: ["history"] })
-    },
+    onSettled: () => invalidateDateDependentQueries(queryClient),
   })
 }

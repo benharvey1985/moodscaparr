@@ -7,17 +7,11 @@ import {
   updateUser,
   deleteUser,
   fetchSSOConfig,
-  toggleSSO,
   fetchInviteCodes,
   generateInviteCode,
   revokeInviteCode,
   fetchSetting,
   updateSetting,
-} from "@/lib/api/admin"
-import type {
-  AdminUserList,
-  SsoProviderConfig,
-  InviteCodeData,
 } from "@/lib/api/admin"
 
 export const adminKeys = {
@@ -65,14 +59,6 @@ export function useAdminMutations() {
     },
   })
 
-  const toggleSSOMutation = useMutation({
-    mutationFn: ({ provider, enabled }: { provider: string; enabled: boolean }) =>
-      toggleSSO(provider, enabled),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: adminKeys.sso })
-    },
-  })
-
   const generateInviteMutation = useMutation({
     mutationFn: (data: { maxUses: number; expiresAt: string }) => generateInviteCode(data),
     onSuccess: () => {
@@ -90,7 +76,6 @@ export function useAdminMutations() {
   return {
     updateUser: updateUserMutation,
     deleteUser: deleteUserMutation,
-    toggleSSO: toggleSSOMutation,
     generateInviteCode: generateInviteMutation,
     revokeInviteCode: revokeInviteMutation,
   }

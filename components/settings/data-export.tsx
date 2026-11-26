@@ -1,29 +1,36 @@
 "use client"
 
-import { useState } from "react"
+import { useRef } from "react"
 import { useExportData } from "@/hooks/use-profile"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Download } from "lucide-react"
+import { useToast } from "@/components/ui/toaster"
 
 export function DataExport() {
-  const [loading, setLoading] = useState(false)
+  const exportingRef = useRef(false)
   const exportMutation = useExportData()
+  const { addToast } = useToast()
 
   async function handleExport() {
-    setLoading(true)
+    if (exportingRef.current || exportMutation.isPending) return
+    exportingRef.current = true
     try {
       const blob = await exportMutation.mutateAsync()
       const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `moodscaparr-export-${new Date().toISOString().split("T")[0]}.json`
-      a.click()
+      const anchor = document.createElement("a")
+      anchor.href = url
+      anchor.download = `moodscaparr-export-${new Date().toISOString().slice(0, 10)}.json`
+      anchor.click()
       URL.revokeObjectURL(url)
-    } catch {
-      /* ignore */
+      addToast({ message: "Export downloaded", variant: "success" })
+    } catch (exportError) {
+      addToast({
+        message: exportError instanceof Error ? exportError.message : "Export failed",
+        variant: "error",
+      })
     } finally {
-      setLoading(false)
+      exportingRef.current = false
     }
   }
 
@@ -35,11 +42,14 @@ export function DataExport() {
           Download all your mood entries, profile, and achievements as JSON.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <Button onClick={handleExport} disabled={loading}>
+      <CardContent className="space-y-3">
+        <Button type="button" onClick={handleExport} disabled={exportMutation.isPending}>
           <Download className="mr-2 size-4" />
-          {loading ? "Exporting..." : "Export My Data"}
+          {exportMutation.isPending ? "Exporting..." : "Export My Data"}
         </Button>
+        {exportMutation.isError && (
+          <p role="alert" className="text-sm text-destructive">{exportMutation.error.message}</p>
+        )}
       </CardContent>
     </Card>
   )

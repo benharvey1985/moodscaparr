@@ -41,7 +41,13 @@ function Toaster({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ toasts, addToast, removeToast }}>
       {children}
-      <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2">
+      <div
+        role="region"
+        aria-label="Notifications"
+        aria-live="polite"
+        aria-relevant="additions"
+        className="pointer-events-none fixed bottom-[calc(8.5rem+env(safe-area-inset-bottom))] left-4 right-4 z-[100] mx-auto flex max-w-sm flex-col gap-2 sm:bottom-auto sm:top-4 sm:left-auto sm:right-4 sm:mx-0"
+      >
         {toasts.map((toast) => (
           <Toast
             key={toast.id}

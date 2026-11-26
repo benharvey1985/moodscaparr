@@ -177,6 +177,7 @@ exports.Prisma.MoodEntryScalarFieldEnum = {
   moodIndex: 'moodIndex',
   intensity: 'intensity',
   date: 'date',
+  localDate: 'localDate',
   activities: 'activities',
   weather: 'weather',
   sleepHours: 'sleepHours',
@@ -227,7 +228,14 @@ exports.Prisma.InviteConsumptionScalarFieldEnum = {
   id: 'id',
   email: 'email',
   code: 'code',
+  expiresAt: 'expiresAt',
   createdAt: 'createdAt'
+};
+
+exports.Prisma.ApiRateLimitScalarFieldEnum = {
+  key: 'key',
+  count: 'count',
+  resetAt: 'resetAt'
 };
 
 exports.Prisma.AchievementScalarFieldEnum = {
@@ -270,6 +278,7 @@ exports.Prisma.ModelName = {
   InviteCode: 'InviteCode',
   AppSetting: 'AppSetting',
   InviteConsumption: 'InviteConsumption',
+  ApiRateLimit: 'ApiRateLimit',
   Achievement: 'Achievement'
 };
 

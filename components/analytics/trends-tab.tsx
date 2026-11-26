@@ -2,34 +2,55 @@
 
 import { useMemo } from "react"
 import {
-  LineChart,
-  Line,
-  BarChart,
   Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
 } from "recharts"
-import { format } from "date-fns"
+import { BarChart3 } from "lucide-react"
 import type { MoodEntry } from "@/types/mood"
-import { TrendingUp } from "lucide-react"
+import { formatLocalDate } from "@/lib/dates"
+import {
+  groupMoodByActivity,
+  groupMoodByDay,
+  groupMoodByDayOfWeek,
+  groupMoodByWeather,
+  groupWellbeingByDay,
+} from "@/components/analytics/analytics-data"
+import { ChartDataTable } from "@/components/analytics/chart-data-table"
 
 interface TrendsTabProps {
   entries: MoodEntry[] | undefined
 }
 
-function getScore(entry: { category: string; intensity: number }): number {
-  return entry.category === "NEGATIVE" ? 11 - entry.intensity : entry.intensity
+const TOOLTIP_STYLE = {
+  background: "var(--popover)",
+  border: "1px solid var(--border)",
+  borderRadius: "0.5rem",
+  color: "var(--popover-foreground)",
+}
+
+const AXIS_TICK = { fill: "var(--muted-foreground)", fontSize: 11 }
+
+function shortDate(date: string): string {
+  return formatLocalDate(date, { month: "short", day: "numeric" })
+}
+
+function longDate(date: string): string {
+  return formatLocalDate(date, { month: "short", day: "numeric", year: "numeric" })
 }
 
 function EmptyChart({ label }: { label: string }) {
   return (
-    <div className="flex h-[300px] items-center justify-center rounded-xl border border-dashed">
+    <div className="flex h-[220px] items-center justify-center rounded-xl border border-dashed">
       <div className="text-center">
-        <TrendingUp className="mx-auto mb-2 size-8 text-muted-foreground" />
+        <BarChart3 className="mx-auto mb-2 size-8 text-muted-foreground" />
         <p className="text-sm text-muted-foreground">{label}</p>
       </div>
     </div>
@@ -37,257 +58,206 @@ function EmptyChart({ label }: { label: string }) {
 }
 
 export function TrendsTab({ entries }: TrendsTabProps) {
-  const moodTimelineData = useMemo(() => {
-    if (!entries || entries.length < 2) return null
-    const grouped = new Map<string, { date: string; score: number; count: number }>()
-    for (const entry of entries) {
-      const key = format(new Date(entry.date), "yyyy-MM-dd")
-      const existing = grouped.get(key)
-      const score = getScore(entry)
-      if (existing) {
-        existing.score += score
-        existing.count++
-      } else {
-        grouped.set(key, { date: key, score, count: 1 })
-      }
-    }
-    return Array.from(grouped.values())
-      .map((d) => ({ ...d, score: Math.round((d.score / d.count) * 10) / 10 }))
-      .sort((a, b) => a.date.localeCompare(b.date))
-  }, [entries])
+  const moodTimelineData = useMemo(() => groupMoodByDay(entries ?? []), [entries])
+  const dayOfWeekData = useMemo(() => groupMoodByDayOfWeek(entries ?? []), [entries])
+  const weatherData = useMemo(() => groupMoodByWeather(entries ?? []), [entries])
+  const activityData = useMemo(() => groupMoodByActivity(entries ?? []), [entries])
+  const wellbeingData = useMemo(() => groupWellbeingByDay(entries ?? []), [entries])
+  const energyStressData = wellbeingData.filter((day) => day.energy !== null || day.stress !== null)
+  const sleepData = wellbeingData.filter((day) => day.sleep !== null)
 
-  const dayOfWeekData = useMemo(() => {
-    if (!entries || entries.length < 2) return null
-    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-    const grouped = new Map<number, { day: string; score: number; count: number }>()
-    for (const entry of entries) {
-      const d = new Date(entry.date)
-      const dayIndex = d.getDay()
-      const existing = grouped.get(dayIndex)
-      const score = getScore(entry)
-      if (existing) {
-        existing.score += score
-        existing.count++
-      } else {
-        grouped.set(dayIndex, { day: dayNames[dayIndex], score, count: 1 })
-      }
-    }
-    return Array.from(grouped.entries())
-      .sort(([a], [b]) => a - b)
-      .map(([, v]) => ({ ...v, score: Math.round((v.score / v.count) * 10) / 10 }))
-  }, [entries])
-
-  const weatherData = useMemo(() => {
-    if (!entries || entries.length < 2) return null
-    const grouped = new Map<string, { weather: string; score: number; count: number }>()
-    for (const entry of entries) {
-      if (!entry.weather) continue
-      const existing = grouped.get(entry.weather)
-      const score = getScore(entry)
-      if (existing) {
-        existing.score += score
-        existing.count++
-      } else {
-        grouped.set(entry.weather, { weather: entry.weather, score, count: 1 })
-      }
-    }
-    const result = Array.from(grouped.values()).map((d) => ({
-      ...d,
-      score: Math.round((d.score / d.count) * 10) / 10,
-    }))
-    return result.length >= 2 ? result : null
-  }, [entries])
-
-  const wellbeingData = useMemo(() => {
-    if (!entries || entries.length < 2) return null
-    const grouped = new Map<
-      string,
-      { date: string; energy: number; stress: number; sleep: number; count: number }
-    >()
-    for (const entry of entries) {
-      if (entry.energyLevel === null && entry.stressLevel === null && entry.sleepHours === null)
-        continue
-      const key = format(new Date(entry.date), "yyyy-MM-dd")
-      const existing = grouped.get(key)
-      if (existing) {
-        existing.energy += entry.energyLevel ?? 0
-        existing.stress += entry.stressLevel ?? 0
-        existing.sleep += entry.sleepHours ?? 0
-        existing.count++
-      } else {
-        grouped.set(key, {
-          date: key,
-          energy: entry.energyLevel ?? 0,
-          stress: entry.stressLevel ?? 0,
-          sleep: entry.sleepHours ?? 0,
-          count: 1,
-        })
-      }
-    }
-    const result = Array.from(grouped.values())
-      .map((d) => ({
-        date: d.date,
-        energy: Math.round((d.energy / d.count) * 10) / 10,
-        stress: Math.round((d.stress / d.count) * 10) / 10,
-        sleep: Math.round((d.sleep / d.count) * 10) / 10,
-      }))
-      .sort((a, b) => a.date.localeCompare(b.date))
-    return result.length >= 2 ? result : null
-  }, [entries])
-
-  const activityData = useMemo(() => {
-    if (!entries || entries.length < 2) return null
-    const grouped = new Map<string, { activity: string; score: number; count: number }>()
-    for (const entry of entries) {
-      if (!entry.activities || entry.activities.length === 0) continue
-      for (const activity of entry.activities) {
-        const existing = grouped.get(activity)
-        const score = getScore(entry)
-        if (existing) {
-          existing.score += score
-          existing.count++
-        } else {
-          grouped.set(activity, { activity, score, count: 1 })
-        }
-      }
-    }
-    const result = Array.from(grouped.values())
-      .map((d) => ({ ...d, score: Math.round((d.score / d.count) * 10) / 10 }))
-      .sort((a, b) => b.score - a.score)
-    return result.length >= 2 ? result : null
-  }, [entries])
+  const energyCount = entries?.filter((entry) => entry.energyLevel !== null).length ?? 0
+  const stressCount = entries?.filter((entry) => entry.stressLevel !== null).length ?? 0
+  const sleepCount = entries?.filter((entry) => entry.sleepHours !== null).length ?? 0
+  const totalEntries = entries?.length ?? 0
 
   return (
     <div className="space-y-8">
-      <div>
-        <h3 className="mb-4 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          Mood Timeline
-        </h3>
-        {moodTimelineData ? (
+      <section>
+        <h2 className="mb-4 text-sm font-semibold tracking-wider text-muted-foreground uppercase">Mood Timeline</h2>
+        {moodTimelineData.length > 0 ? (
           <div className="rounded-xl border p-4">
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={moodTimelineData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 11 }}
-                  tickFormatter={(v) => format(new Date(v), "MMM d")}
-                />
-                <YAxis domain={[1, 10]} tick={{ fontSize: 11 }} />
+              <LineChart data={moodTimelineData} accessibilityLayer title="Average mood score by local date">
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="date" tick={AXIS_TICK} tickFormatter={shortDate} />
+                <YAxis domain={[1, 10]} tick={AXIS_TICK} />
                 <Tooltip
-                  labelFormatter={(v) => format(new Date(v), "MMM d, yyyy")}
+                  contentStyle={TOOLTIP_STYLE}
+                  labelFormatter={(value) => longDate(String(value))}
                   formatter={(value) => [`${Number(value)}/10`, "Mood Score"]}
                 />
                 <Line
                   type="monotone"
                   dataKey="score"
-                  stroke="#8884d8"
+                  name="Mood Score"
+                  stroke="var(--chart-1)"
                   strokeWidth={2}
-                  dot={{ r: 4, fill: "#8884d8" }}
+                  dot={{ r: 4, fill: "var(--chart-1)" }}
                   activeDot={{ r: 6 }}
+                  connectNulls={false}
                 />
               </LineChart>
             </ResponsiveContainer>
+            <ChartDataTable
+              caption="Average mood score by local date"
+              summary={`${moodTimelineData.length} days with entries. Scores range from 1 to 10.`}
+              columns={[
+                { key: "date", label: "Local date", value: (row) => longDate(row.date) },
+                { key: "score", label: "Avg mood", value: (row) => `${row.score}/10` },
+                { key: "count", label: "Entries", value: (row) => row.count },
+              ]}
+              rows={moodTimelineData}
+            />
           </div>
-        ) : (
-          <EmptyChart label="Not enough data for this chart" />
-        )}
-      </div>
+        ) : <EmptyChart label="No mood entries in this range" />}
+      </section>
 
       <div className="grid gap-8 lg:grid-cols-2">
-        <div>
-          <h3 className="mb-4 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            Day of Week
-          </h3>
-          {dayOfWeekData ? (
+        <section>
+          <h2 className="mb-4 text-sm font-semibold tracking-wider text-muted-foreground uppercase">Day of Week</h2>
+          {dayOfWeekData.length > 0 ? (
             <div className="rounded-xl border p-4">
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={dayOfWeekData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="day" tick={{ fontSize: 11 }} />
-                  <YAxis domain={[1, 10]} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(value) => [`${Number(value)}/10`, "Avg Mood"]} />
-                  <Bar dataKey="score" fill="#8884d8" radius={[4, 4, 0, 0]} />
+                <BarChart data={dayOfWeekData} accessibilityLayer title="Average mood score by day of week">
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="day" tick={AXIS_TICK} />
+                  <YAxis domain={[1, 10]} tick={AXIS_TICK} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value) => [`${Number(value)}/10`, "Avg Mood"]} />
+                  <Bar dataKey="score" name="Avg Mood" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
+              <ChartDataTable
+                caption="Average mood score by day of week"
+                summary="Weekday labels use each entry's profile-local calendar date."
+                columns={[
+                  { key: "day", label: "Day", value: (row) => row.day },
+                  { key: "score", label: "Avg mood", value: (row) => `${row.score}/10` },
+                  { key: "count", label: "Entries", value: (row) => row.count },
+                ]}
+                rows={dayOfWeekData}
+              />
             </div>
-          ) : (
-            <EmptyChart label="Not enough data for this chart" />
-          )}
-        </div>
+          ) : <EmptyChart label="No entries for day-of-week trends" />}
+        </section>
 
-        <div>
-          <h3 className="mb-4 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            Weather Correlation
-          </h3>
-          {weatherData ? (
+        <section>
+          <h2 className="mb-4 text-sm font-semibold tracking-wider text-muted-foreground uppercase">Weather Correlation</h2>
+          {weatherData.length > 0 ? (
             <div className="rounded-xl border p-4">
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={weatherData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="weather" tick={{ fontSize: 11 }} />
-                  <YAxis domain={[1, 10]} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(value) => [`${Number(value)}/10`, "Avg Mood"]} />
-                  <Bar dataKey="score" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                <BarChart data={weatherData} accessibilityLayer title="Average mood score by weather">
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="category" tick={AXIS_TICK} />
+                  <YAxis domain={[1, 10]} tick={AXIS_TICK} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value) => [`${Number(value)}/10`, "Avg Mood"]} />
+                  <Bar dataKey="score" name="Avg Mood" fill="var(--chart-3)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
+              <ChartDataTable
+                caption="Average mood score by weather"
+                summary={`${weatherData.length} weather categories with recorded entries.`}
+                columns={[
+                  { key: "weather", label: "Weather", value: (row) => row.category },
+                  { key: "score", label: "Avg mood", value: (row) => `${row.score}/10` },
+                  { key: "count", label: "Entries", value: (row) => row.count },
+                ]}
+                rows={weatherData}
+              />
             </div>
-          ) : (
-            <EmptyChart label="Not enough data for this chart" />
-          )}
-        </div>
+          ) : <EmptyChart label="No weather data in this range" />}
+        </section>
       </div>
 
-      <div>
-        <h3 className="mb-4 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          Wellbeing Trends
-        </h3>
-        {wellbeingData ? (
+      <section>
+        <h2 className="mb-4 text-sm font-semibold tracking-wider text-muted-foreground uppercase">Energy &amp; Stress Trends</h2>
+        {energyStressData.length > 0 ? (
           <div className="rounded-xl border p-4">
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={wellbeingData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 11 }}
-                  tickFormatter={(v) => format(new Date(v), "MMM d")}
-                />
-                <YAxis domain={[0, 10]} tick={{ fontSize: 11 }} />
+              <LineChart data={energyStressData} accessibilityLayer title="Energy and stress by local date">
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="date" tick={AXIS_TICK} tickFormatter={shortDate} />
+                <YAxis yAxisId="energy-stress" domain={[0, 10]} tick={AXIS_TICK} />
                 <Tooltip
-                  labelFormatter={(v) => format(new Date(v), "MMM d, yyyy")}
+                  contentStyle={TOOLTIP_STYLE}
+                  labelFormatter={(value) => longDate(String(value))}
+                  formatter={(value, name) => [`${Number(value)}/10`, String(name)]}
                 />
                 <Legend />
-                <Line type="monotone" dataKey="energy" stroke="#22c55e" strokeWidth={2} name="Energy" />
-                <Line type="monotone" dataKey="stress" stroke="#ef4444" strokeWidth={2} name="Stress" />
-                <Line type="monotone" dataKey="sleep" stroke="#3b82f6" strokeWidth={2} name="Sleep (hrs)" />
+                <Line yAxisId="energy-stress" type="monotone" dataKey="energy" name="Energy" stroke="var(--chart-4)" strokeWidth={2} connectNulls={false} />
+                <Line yAxisId="energy-stress" type="monotone" dataKey="stress" name="Stress" stroke="var(--chart-5)" strokeWidth={2} connectNulls={false} />
               </LineChart>
             </ResponsiveContainer>
+            <ChartDataTable
+              caption="Energy and stress by local date"
+              summary={`Energy recorded in ${energyCount} of ${totalEntries} entries; stress recorded in ${stressCount} of ${totalEntries}. Missing values stay unrecorded.`}
+              columns={[
+                { key: "date", label: "Local date", value: (row) => longDate(row.date) },
+                { key: "energy", label: "Energy", value: (row) => row.energy === null ? "Not recorded" : `${row.energy}/10` },
+                { key: "stress", label: "Stress", value: (row) => row.stress === null ? "Not recorded" : `${row.stress}/10` },
+              ]}
+              rows={energyStressData}
+            />
           </div>
-        ) : (
-          <EmptyChart label="Not enough data for this chart" />
-        )}
-      </div>
+        ) : <EmptyChart label="No energy or stress data in this range" />}
+      </section>
 
-      <div>
-        <h3 className="mb-4 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          Activity Impact
-        </h3>
-        {activityData ? (
+      <section>
+        <h2 className="mb-4 text-sm font-semibold tracking-wider text-muted-foreground uppercase">Sleep Trends</h2>
+        {sleepData.length > 0 ? (
           <div className="rounded-xl border p-4">
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={activityData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis type="number" domain={[1, 10]} tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="activity" tick={{ fontSize: 11 }} width={90} />
-                <Tooltip formatter={(value) => [`${Number(value)}/10`, "Avg Mood"]} />
-                <Bar dataKey="score" fill="#a855f7" radius={[0, 4, 4, 0]} />
+              <LineChart data={sleepData} accessibilityLayer title="Sleep hours by local date">
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="date" tick={AXIS_TICK} tickFormatter={shortDate} />
+                <YAxis domain={[0, 24]} tick={AXIS_TICK} />
+                <Tooltip
+                  contentStyle={TOOLTIP_STYLE}
+                  labelFormatter={(value) => longDate(String(value))}
+                  formatter={(value) => [`${Number(value)} hours`, "Sleep"]}
+                />
+                <Line type="monotone" dataKey="sleep" name="Sleep Hours" stroke="var(--chart-1)" strokeWidth={2} connectNulls={false} />
+              </LineChart>
+            </ResponsiveContainer>
+            <ChartDataTable
+              caption="Sleep hours by local date"
+              summary={`Sleep recorded in ${sleepCount} of ${totalEntries} entries. Sleep uses a separate 0–24 hour scale.`}
+              columns={[
+                { key: "date", label: "Local date", value: (row) => longDate(row.date) },
+                { key: "sleep", label: "Sleep", value: (row) => row.sleep === null ? "Not recorded" : `${row.sleep} hours` },
+              ]}
+              rows={sleepData}
+            />
+          </div>
+        ) : <EmptyChart label="No sleep data in this range" />}
+      </section>
+
+      <section>
+        <h2 className="mb-4 text-sm font-semibold tracking-wider text-muted-foreground uppercase">Activity Impact</h2>
+        {activityData.length > 0 ? (
+          <div className="rounded-xl border p-4">
+            <ResponsiveContainer width="100%" height={Math.max(260, activityData.length * 36)}>
+              <BarChart data={activityData} layout="vertical" accessibilityLayer title="Average mood score by activity">
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis type="number" domain={[1, 10]} tick={AXIS_TICK} />
+                <YAxis type="category" dataKey="category" tick={AXIS_TICK} width={90} />
+                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value) => [`${Number(value)}/10`, "Avg Mood"]} />
+                <Bar dataKey="score" name="Avg Mood" fill="var(--chart-2)" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
+            <ChartDataTable
+              caption="Average mood score by activity"
+              summary={`${activityData.length} activities with recorded entries.`}
+              columns={[
+                { key: "activity", label: "Activity", value: (row) => row.category },
+                { key: "score", label: "Avg mood", value: (row) => `${row.score}/10` },
+                { key: "count", label: "Entries", value: (row) => row.count },
+              ]}
+              rows={activityData}
+            />
           </div>
-        ) : (
-          <EmptyChart label="Not enough data for this chart" />
-        )}
-      </div>
+        ) : <EmptyChart label="No activity data in this range" />}
+      </section>
     </div>
   )
 }

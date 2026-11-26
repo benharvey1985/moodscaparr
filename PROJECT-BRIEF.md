@@ -1,7 +1,7 @@
-# Moodscaper — Project Brief
+# Moodscaparr — Project Brief
 
 ## Overview
-A daily mood diary web/mobile app. Users log how they feel each day with optional context (activities, weather, sleep, wellbeing, reflections). Visualizes patterns through history, calendar heatmap, analytics/charts, achievement badges, and streak tracking. Includes an admin panel for user/instance management.
+A self-hosted daily mood diary web app. Users log one mood entry per user-local day with optional context (activities, weather, sleep, wellbeing, reflections). Visualizes patterns through history, calendar heatmap, analytics/charts, achievement badges, and streak tracking. Includes an admin panel for user/instance management.
 
 ---
 
@@ -9,16 +9,18 @@ A daily mood diary web/mobile app. Users log how they feel each day with optiona
 
 ### Authentication
 - Email/password registration and login
-- Password reset flow
-- Optional SSO (Google, GitHub — toggleable in admin)
+- Real password reset email through Resend; requires `RESEND_API_KEY` and verified `EMAIL_FROM`
+- Optional Google/GitHub SSO configured by server environment variables; admin UI shows read-only status
 - Role-based access: regular users + admins
 - Optional invite-only registration (admin generates time-limited invite codes)
 - First registered user becomes admin
 
 ### Mood Logging (3-step wizard)
-1. **Pick mood** — 19 mood options across 3 categories (Positive/Neutral/Negative) with intensity (1–10) and date
+1. **Pick mood** — 19 mood options across 3 categories (Positive/Neutral/Negative) with intensity (1–10) and user-local date
 2. **Add context** — multi-select activities, single-select weather, sleep hours/quality, energy level, stress level
 3. **Reflect** — 4 free-text prompts: "What went well?", "What was challenging?", "What are you grateful for?", "What's on your mind?" (all optional)
+
+One entry is allowed per user/local day. The API returns a conflict for duplicate creates; users edit the existing entry. `localDate` is authoritative, while `date` is a compatibility instant. Legacy rows are backfilled with `npx tsx scripts/backfill-local-dates.ts` after a `--dry-run` review; the script reports duplicates and never merges or deletes rows.
 
 ### Quick Log (Dashboard)
 - One-tap mood logging from the home page: pick category → pick mood → saves instantly with sensible defaults
@@ -60,16 +62,20 @@ Date range filter: 7d / 30d / 90d / All Time
 
 **Trends tab (charts):** Mood timeline (line), day-of-week comparison (bar), weather correlation (bar), wellbeing trends (line), activity impact (bar)
 
-**Reflections tab:** Emotional transition matrix, word cloud, recent reflections
+**Reflections tab:** Filterable recent reflections with progressive loading. Word cloud and emotional transition matrix are deferred.
 
-**PDF report** — downloadable summary of the filtered period
+**Print / Save PDF** — browser print dialog for the active tab and filtered period. Users choose Save as PDF in the browser; the app does not generate a server-side PDF download.
 
 ### User Profile
-- Edit: full name, country (auto-selects timezone/date format), theme preference, timezone, date format
+- Edit: full name, country (auto-selects timezone), timezone
 - Customizable streak goal
-- Daily reminder toggle (browser notification) with custom time
+- Theme control in the application header (light/dark/system)
 - Achievement summary (count + progress)
+- Feedback History and Replay Tour controls
 - Data backup: export and restore (JSON file)
+- Permanent account deletion; credential accounts require password confirmation, while SSO-only accounts must export and arrange deletion with another administrator
+
+Date display formatting is not user-configurable. Daily reminders are not implemented.
 
 ### Achievements
 14 badges across 4 groups:
@@ -77,18 +83,18 @@ Date range filter: 7d / 30d / 90d / All Time
 | Group | Badges |
 |-------|--------|
 | **Milestones** | Log 1 / 10 / 50 / 100 entries |
-| **Streaks** | 7-day streak / 30-day streak / 60-day streak / 30-day longest streak |
+| **Streaks** | 7 / 30 / 60 logged-day milestones and a 30-day longest streak; all allow up to two rest days between logged days |
 | **Exploration** | Log all 19 moods / Log in all 7 weathers / 5+ activities in one entry / 50 reflections total |
-| **Special** | Log before 9am / Log after 10pm |
+| **Special** | Log before 9am / Log at or after 10pm |
 
 - Progress bars on each achievement
 - Confetti + toast notification on unlock
 - Overall completion percentage
 
 ### Streak Tracking
-- Consecutive day tracking (current + longest)
+- Logged-day tracking (current + longest), with up to two rest days allowed between logged days
 - Visual progress bar toward user's goal
-- Integrated with achievements
+- The same rest-day rule drives streak achievements
 
 ### Theme
 - Light / Dark / System (follow OS)
@@ -100,20 +106,21 @@ Date range filter: 7d / 30d / 90d / All Time
 
 ### Feedback System
 - FAB button (fixed position)
-- Submit: bug report (with severity) or feature suggestion (with category)
-- Feedback history page
-- Opens GitHub issue URL on submission
+- Bug report (with severity) or feature suggestion (with category)
+- Prepares a prefilled GitHub issue draft; no issue exists until the user submits it on GitHub
+- Popup blocking shows a fallback link, and missing delivery configuration shows an error
+- Drafts remain pending until explicit confirmation; Settings includes Feedback History
 
 ### Admin Panel
-**Dashboard:** KPIs (total users, active users, total entries, avg streak), mood trend chart, mood distribution pie, registration trend, activity density heatmap, CSV export
+**Dashboard:** KPIs (total users, active users, total entries, average streak goal), registration trend, mood distribution, CSV export
 
-**User Management:** Table with search, role filter, promote/demote, suspend/activate, delete (with undo), user detail panel
+**User Management:** Table with search, role filter, promote/demote, suspend/activate, permanent delete (no undo), user detail panel. Self-deletion and last-admin deletion are blocked.
 
-**Instance Settings:** SSO config (Google/GitHub OAuth), invite-only mode, invite code generation/revocation
+**Instance Settings:** Read-only environment-configured Google/GitHub SSO status, invite-only mode, invite code generation/revocation
 
 ### Seed / Test Data
-- Toggle to generate 60 days of sample entries
-- Toggle off clears them
+- Development/database command only: `npx prisma db seed` can create 60 days of sample entries when the database is empty and an admin exists
+- No shipped admin toggle generates or clears seed data
 
 ---
 

@@ -3,6 +3,7 @@
 import { useAdminStats } from "@/hooks/use-admin"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   BarChart,
   Bar,
@@ -17,13 +18,28 @@ import {
 import { Users, Activity, BarChart3, Flame, Download } from "lucide-react"
 
 const MOOD_COLORS = {
-  POSITIVE: "hsl(var(--mood-positive, 142 76% 36%))",
-  NEUTRAL: "hsl(var(--mood-neutral, 48 96% 53%))",
-  NEGATIVE: "hsl(var(--mood-negative, 0 72% 51%))",
+  POSITIVE: "var(--mood-positive, hsl(142 76% 36%))",
+  NEUTRAL: "var(--mood-neutral, hsl(48 96% 53%))",
+  NEGATIVE: "var(--mood-negative, hsl(0 72% 51%))",
 }
 
 export function AdminDashboard() {
-  const { data: stats, isLoading } = useAdminStats()
+  const { data: stats, isLoading, isError, refetch, isFetching } = useAdminStats()
+
+  if (isError) {
+    return (
+      <Card>
+        <CardContent className="space-y-3 py-5">
+          <p role="alert" className="text-sm text-destructive">
+            Unable to load dashboard statistics. Check your connection and retry.
+          </p>
+          <Button variant="outline" size="sm" disabled={isFetching} onClick={() => void refetch()}>
+            {isFetching ? "Retrying..." : "Retry"}
+          </Button>
+        </CardContent>
+      </Card>
+    )
+  }
 
   if (isLoading || !stats) {
     return (
@@ -47,6 +63,19 @@ export function AdminDashboard() {
     { name: "Neutral", value: stats.moodDistribution.NEUTRAL, color: MOOD_COLORS.NEUTRAL },
     { name: "Negative", value: stats.moodDistribution.NEGATIVE, color: MOOD_COLORS.NEGATIVE },
   ]
+  const resetHealth = stats.passwordResetHealth
+  const resetHealthLabel = {
+    healthy: "Healthy",
+    degraded: "Degraded",
+    not_configured: "Not configured",
+    unknown: "No attempts",
+  }[resetHealth.status]
+  const resetHealthVariant = {
+    healthy: "default",
+    degraded: "destructive",
+    not_configured: "outline",
+    unknown: "secondary",
+  }[resetHealth.status] as "default" | "destructive" | "outline" | "secondary"
 
   function handleExportCsv() {
     if (!stats) return
@@ -124,6 +153,26 @@ export function AdminDashboard() {
         </Card>
       </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Password Reset Delivery</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <Badge variant={resetHealthVariant}>{resetHealthLabel}</Badge>
+          <p role="status" className="text-muted-foreground">{resetHealth.message}</p>
+          {resetHealth.lastSuccessAt && (
+            <p className="text-xs text-muted-foreground">
+              Last success: <time dateTime={resetHealth.lastSuccessAt}>{new Date(resetHealth.lastSuccessAt).toLocaleString()}</time>
+            </p>
+          )}
+          {resetHealth.lastFailureAt && (
+            <p className="text-xs text-muted-foreground">
+              Last failure: <time dateTime={resetHealth.lastFailureAt}>{new Date(resetHealth.lastFailureAt).toLocaleString()}</time>
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -146,7 +195,7 @@ export function AdminDashboard() {
                     axisLine={false}
                   />
                   <Tooltip />
-                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="count" fill="var(--primary)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

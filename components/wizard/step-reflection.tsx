@@ -1,63 +1,50 @@
 "use client"
 
-import { useWizard } from "./wizard-provider"
+import { useWizard, fullSchema } from "./wizard-provider"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { REFLECTION_PROMPTS } from "@/components/history/reflection-prompts"
 
 interface StepReflectionProps {
   onBack: () => void
   onSave: () => void
+  isPending: boolean
 }
 
-const prompts = [
-  { key: "reflection1" as const, label: "What went well?" },
-  { key: "reflection2" as const, label: "What was challenging?" },
-  { key: "reflection3" as const, label: "What are you grateful for?" },
-  { key: "reflection4" as const, label: "What's on your mind?" },
-]
-
-export function StepReflection({ onBack, onSave }: StepReflectionProps) {
+export function StepReflection({ onBack, onSave, isPending }: StepReflectionProps) {
   const { formData, updateFormData } = useWizard()
+  const valid = fullSchema.safeParse(formData).success
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold">Reflect</h2>
-        <p className="text-sm text-muted-foreground">
-          Take a moment to reflect. All fields are optional.
-        </p>
+        <p className="text-sm text-muted-foreground">Take a moment to reflect. All fields are optional.</p>
       </div>
 
-      {prompts.map(({ key, label }) => {
+      {REFLECTION_PROMPTS.map(({ key, label }) => {
         const value = formData[key] ?? ""
-        const count = value.length
-
+        const inputId = `wizard-${key}`
         return (
           <div key={key} className="space-y-1.5">
-            <label className="text-sm font-medium">{label}</label>
+            <label htmlFor={inputId} className="text-sm font-medium">{label}</label>
             <Textarea
-              placeholder={`Write your thoughts...`}
+              id={inputId}
+              placeholder="Write your thoughts..."
               maxLength={500}
               rows={3}
+              disabled={isPending}
               value={value}
-              onChange={(e) =>
-                updateFormData({ [key]: e.target.value || undefined })
-              }
+              onChange={(event) => updateFormData({ [key]: event.target.value || null })}
             />
-            <p className="text-right text-xs text-muted-foreground">
-              {count}/500
-            </p>
+            <p className="text-right text-xs text-muted-foreground">{value.length}/500</p>
           </div>
         )
       })}
 
       <div className="flex justify-between">
-        <Button type="button" variant="outline" onClick={onBack}>
-          Back
-        </Button>
-        <Button type="button" onClick={onSave}>
-          Save Entry
-        </Button>
+        <Button type="button" variant="outline" onClick={onBack} disabled={isPending}>Back</Button>
+        <Button type="button" onClick={onSave} disabled={!valid || isPending}>Save Entry</Button>
       </div>
     </div>
   )

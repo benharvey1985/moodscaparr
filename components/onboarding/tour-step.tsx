@@ -16,7 +16,7 @@ function TourStep({ step, title, description, icon: Icon, isActive, isCompleted 
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-4 text-center transition-all duration-300",
+        "flex flex-col items-center gap-4 text-center transition-all duration-300 motion-reduce:transition-none",
         isActive ? "opacity-100" : "hidden opacity-0"
       )}
     >
@@ -26,7 +26,7 @@ function TourStep({ step, title, description, icon: Icon, isActive, isCompleted 
           isCompleted ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
         )}
       >
-        <Icon className="size-8" />
+        <Icon className="size-8" aria-hidden="true" />
       </div>
       <div className="space-y-1">
         <p className="text-xs font-medium text-muted-foreground">Step {step} of 3</p>

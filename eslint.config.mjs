@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    ".slim/**",
+    ".planning/**",
+    ".opencode/**",
+    ".claude/**",
+    "graphify-out/**",
+    "prisma/generated/**",
   ]),
 ]);
 

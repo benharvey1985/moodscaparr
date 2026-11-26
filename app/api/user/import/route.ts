@@ -2,33 +2,61 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { prisma } from "@/lib/prisma"
-import { z } from "zod"
+import { utcDateOnly } from "@/lib/dates"
 import { rateLimit } from "@/lib/rate-limit"
-import { checkAndUnlockAchievements } from "@/lib/achievements"
+import { checkAndUnlockAchievementsSafely } from "@/lib/achievements"
+import {
+  moodImportChunkSchema,
+  normalizeImportedEntry,
+  type MoodImportEntry,
+} from "@/lib/mood-validation"
 
-const importLimiter = rateLimit({ interval: 60000, max: 5 })
+const importLimiter = rateLimit({ interval: 60000, max: 120 })
 
-const importSchema = z.object({
-  version: z.string(),
-  data: z.object({
-    entries: z.array(z.object({
-      category: z.enum(["POSITIVE", "NEUTRAL", "NEGATIVE"]),
-      moodIndex: z.number().int().min(0).max(18),
-      intensity: z.number().int().min(1).max(10),
-      date: z.string(),
-      activities: z.array(z.string()).max(50).optional(),
-      weather: z.string().max(100).optional(),
-      sleepHours: z.number().optional(),
-      sleepQuality: z.string().max(50).optional(),
-      energyLevel: z.number().int().min(1).max(10).optional(),
-      stressLevel: z.number().int().min(1).max(10).optional(),
-      reflection1: z.string().max(500).optional(),
-      reflection2: z.string().max(500).optional(),
-      reflection3: z.string().max(500).optional(),
-      reflection4: z.string().max(500).optional(),
-    })).max(1000),
-  }),
-})
+function sameContent(entry: MoodImportEntry, normalized: ReturnType<typeof normalizeImportedEntry>, existing: {
+  category: string
+  moodIndex: number
+  intensity: number
+  localDate: string | null
+  date: Date
+  activities: string[]
+  weather: string | null
+  sleepHours: number | null
+  sleepQuality: string | null
+  energyLevel: number | null
+  stressLevel: number | null
+  reflection1: string | null
+  reflection2: string | null
+  reflection3: string | null
+  reflection4: string | null
+  createdAt: Date
+}) {
+  const localDate = existing.localDate ?? utcDateOnly(existing.date)
+  const sortedExistingActivities = [...existing.activities].sort()
+  const sameActivities =
+    normalized.activities.length === existing.activities.length &&
+    [...normalized.activities].sort().every(
+      (activity, index) => activity === sortedExistingActivities[index]
+    )
+
+  return (
+    normalized.category === existing.category &&
+    normalized.moodIndex === existing.moodIndex &&
+    normalized.intensity === existing.intensity &&
+    normalized.localDate === localDate &&
+    sameActivities &&
+    normalized.weather === existing.weather &&
+    normalized.sleepHours === existing.sleepHours &&
+    normalized.sleepQuality === existing.sleepQuality &&
+    normalized.energyLevel === existing.energyLevel &&
+    normalized.stressLevel === existing.stressLevel &&
+    normalized.reflection1 === existing.reflection1 &&
+    normalized.reflection2 === existing.reflection2 &&
+    normalized.reflection3 === existing.reflection3 &&
+    normalized.reflection4 === existing.reflection4 &&
+    (!entry.createdAt || normalized.createdAt?.getTime() === existing.createdAt.getTime())
+  )
+}
 
 export async function POST(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -36,65 +64,63 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const rl = importLimiter.check(`import:${session.user.id}`)
-  if (!rl.allowed) {
-    return NextResponse.json({ error: "Too many requests", retryIn: rl.resetIn }, { status: 429 })
+  const userId = session.user.id
+  const rate = await importLimiter.check(`import:${userId}`)
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests", retryIn: rate.resetIn },
+      { status: 429 }
+    )
   }
 
-  const body = await request.json()
-  const parsed = importSchema.safeParse(body)
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
+  }
+
+  const parsed = moodImportChunkSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
   }
 
-  const userId = session.user.id
+  const counts = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`mood-entry:${userId}`}))`
 
-  const { imported, skipped } = await prisma.$transaction(async (tx) => {
     let imported = 0
     let skipped = 0
+    let conflicts = 0
 
     for (const entry of parsed.data.data.entries) {
-      const existing = await tx.moodEntry.findFirst({
-        where: {
-          userId,
-          date: new Date(entry.date),
-          category: entry.category,
-        },
-      })
+      const normalized = normalizeImportedEntry(entry)
+      const existing = entry.id
+        ? await tx.moodEntry.findUnique({ where: { id: entry.id } })
+        : null
 
       if (existing) {
-        skipped++
+        if (existing.userId !== userId || !sameContent(entry, normalized, existing)) {
+          conflicts++
+        } else {
+          skipped++
+        }
         continue
       }
 
       await tx.moodEntry.create({
         data: {
+          ...normalized,
           userId,
-          category: entry.category,
-          moodIndex: entry.moodIndex,
-          intensity: entry.intensity,
-          date: new Date(entry.date),
-          activities: entry.activities ?? [],
-          weather: entry.weather ?? null,
-          sleepHours: entry.sleepHours ?? null,
-          sleepQuality: entry.sleepQuality ?? null,
-          energyLevel: entry.energyLevel ?? null,
-          stressLevel: entry.stressLevel ?? null,
-          reflection1: entry.reflection1 ?? null,
-          reflection2: entry.reflection2 ?? null,
-          reflection3: entry.reflection3 ?? null,
-          reflection4: entry.reflection4 ?? null,
         },
       })
       imported++
     }
 
-    return { imported, skipped }
+    return { imported, skipped, conflicts }
   })
 
-  if (imported > 0) {
-    await checkAndUnlockAchievements(userId)
-  }
-
-  return NextResponse.json({ imported, skipped })
+  const newlyUnlocked = counts.imported > 0
+    ? await checkAndUnlockAchievementsSafely(userId)
+    : []
+  return NextResponse.json({ ...counts, newlyUnlocked })
 }

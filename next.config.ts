@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 
 const csp = [
@@ -14,6 +15,9 @@ const csp = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  turbopack: {
+    root: path.resolve(process.cwd()),
+  },
   async headers() {
     return [
       {

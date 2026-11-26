@@ -2,25 +2,12 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { prisma } from "@/lib/prisma"
-import { checkAndUnlockAchievements } from "@/lib/achievements"
-import { z } from "zod"
-
-const createSchema = z.object({
-  category: z.enum(["POSITIVE", "NEUTRAL", "NEGATIVE"]),
-  moodIndex: z.number().int().min(0).max(18),
-  intensity: z.number().int().min(1).max(10),
-  date: z.string(),
-  activities: z.array(z.string()).optional(),
-  weather: z.string().optional(),
-  sleepHours: z.number().optional(),
-  sleepQuality: z.string().optional(),
-  energyLevel: z.number().int().min(1).max(10).optional(),
-  stressLevel: z.number().int().min(1).max(10).optional(),
-  reflection1: z.string().max(500).optional(),
-  reflection2: z.string().max(500).optional(),
-  reflection3: z.string().max(500).optional(),
-  reflection4: z.string().max(500).optional(),
-})
+import { checkAndUnlockAchievementsSafely } from "@/lib/achievements"
+import {
+  createMoodEntrySchema,
+  moodEntryWriteData,
+  serializeMoodEntry,
+} from "@/lib/mood-validation"
 
 export async function GET() {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -34,14 +21,7 @@ export async function GET() {
     take: 50,
   })
 
-  const serialized = entries.map((e) => ({
-    ...e,
-    date: e.date.toISOString(),
-    createdAt: e.createdAt.toISOString(),
-    updatedAt: e.updatedAt.toISOString(),
-  }))
-
-  return NextResponse.json(serialized)
+  return NextResponse.json(entries.map(serializeMoodEntry))
 }
 
 export async function POST(request: Request) {
@@ -50,30 +30,52 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const body = await request.json()
-  const parsed = createSchema.safeParse(body)
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
+  }
+
+  const parsed = createMoodEntrySchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
   }
 
-  const { date, ...rest } = parsed.data
+  const userId = session.user.id
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`mood-entry:${userId}`}))`
 
-  const entry = await prisma.moodEntry.create({
-    data: {
-      ...rest,
-      userId: session.user.id,
-      date: new Date(date),
-    },
+    const existing = await tx.moodEntry.findFirst({
+      where: { userId, localDate: parsed.data.localDate },
+      select: { id: true },
+    })
+    if (existing) return { conflict: true as const, existingId: existing.id }
+
+    const entry = await tx.moodEntry.create({
+      data: {
+        ...moodEntryWriteData(parsed.data),
+        userId,
+      },
+    })
+    return { conflict: false as const, entry }
   })
 
-  const newlyUnlocked = await checkAndUnlockAchievements(session.user.id)
+  if (result.conflict) {
+    return NextResponse.json(
+      {
+        error: "An entry already exists for this local date",
+        existingId: result.existingId,
+      },
+      { status: 409 }
+    )
+  }
+
+  const newlyUnlocked = await checkAndUnlockAchievementsSafely(userId)
 
   return NextResponse.json(
     {
-      ...entry,
-      date: entry.date.toISOString(),
-      createdAt: entry.createdAt.toISOString(),
-      updatedAt: entry.updatedAt.toISOString(),
+      ...serializeMoodEntry(result.entry),
       newlyUnlocked,
     },
     { status: 201 }

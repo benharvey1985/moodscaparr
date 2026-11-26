@@ -1,91 +1,90 @@
 "use client"
 
-import { useSSOConfig, useAdminMutations } from "@/hooks/use-admin"
+import { useSSOConfig } from "@/hooks/use-admin"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useToast } from "@/components/ui/toaster"
+import { Button } from "@/components/ui/button"
 import { Globe, GitBranch } from "lucide-react"
 
-const PROVIDER_INFO: Record<string, { name: string; icon: React.ReactNode }> = {
-  google: { name: "Google", icon: <Globe className="size-5" /> },
-  github: { name: "GitHub", icon: <GitBranch className="size-5" /> },
-}
+const PROVIDER_INFO = {
+  google: {
+    name: "Google",
+    icon: Globe,
+    variables: "GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET",
+    callbackPath: "/api/auth/callback/google",
+  },
+  github: {
+    name: "GitHub",
+    icon: GitBranch,
+    variables: "GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET",
+    callbackPath: "/api/auth/callback/github",
+  },
+} as const
 
 export function SSOConfig() {
-  const { data: providers, isLoading } = useSSOConfig()
-  const { toggleSSO } = useAdminMutations()
-  const { addToast } = useToast()
-
-  async function handleToggle(provider: string, current: boolean) {
-    try {
-      await toggleSSO.mutateAsync({ provider, enabled: !current })
-      addToast({
-        message: `${provider} ${!current ? "enabled" : "disabled"}`,
-        variant: "success",
-      })
-    } catch {
-      addToast({ message: "Failed to update SSO config", variant: "error" })
-    }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="grid gap-4 sm:grid-cols-2">
-        {Array.from({ length: 2 }).map((_, i) => (
-          <Card key={i}>
-            <CardContent className="py-6">
-              <div className="h-20 animate-pulse rounded bg-muted" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    )
-  }
+  const { data: providers, isLoading, error, refetch, isFetching } = useSSOConfig()
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold">SSO Configuration</h2>
-      <p className="text-sm text-muted-foreground">
-        OAuth credentials must be configured in environment variables.
-      </p>
-      <div className="grid gap-4 sm:grid-cols-2">
-        {providers?.map((p) => {
-          const info = PROVIDER_INFO[p.provider] || {
-            name: p.provider,
-            icon: <Globe className="size-5" />,
-          }
-          return (
-            <Card key={p.provider}>
-              <CardContent className="flex items-center justify-between py-5">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
-                    {info.icon}
-                  </div>
-                  <div>
-                    <p className="font-medium">{info.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {p.enabled ? "Enabled" : "Disabled"}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  role="switch"
-                  aria-checked={p.enabled}
-                  onClick={() => handleToggle(p.provider, p.enabled)}
-                  className={`relative inline-flex h-6 w-10 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors ${
-                    p.enabled ? "bg-primary" : "bg-input"
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow-sm transition-transform ${
-                      p.enabled ? "translate-x-4" : "translate-x-0"
-                    }`}
-                  />
-                </button>
+      <div>
+        <h2 className="text-xl font-semibold">SSO Configuration</h2>
+        <p className="text-sm text-muted-foreground">
+          Provider availability is read-only and controlled by server environment variables.
+          Changes require a server restart and are never stored in the database.
+        </p>
+      </div>
+
+      {isLoading ? (
+        <div className="grid gap-4 sm:grid-cols-2" aria-label="Loading SSO status">
+          {[0, 1].map((index) => (
+            <Card key={index}>
+              <CardContent className="py-6">
+                <div className="h-24 animate-pulse rounded bg-muted" />
               </CardContent>
             </Card>
-          )
-        })}
-      </div>
+          ))}
+        </div>
+      ) : error ? (
+        <Card>
+          <CardContent className="space-y-3 py-5">
+            <p role="alert" className="text-sm text-destructive">
+              Unable to load SSO status. Check your connection and retry.
+            </p>
+            <Button variant="outline" size="sm" disabled={isFetching} onClick={() => void refetch()}>
+              {isFetching ? "Retrying..." : "Retry"}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {providers?.map((provider) => {
+            const info = PROVIDER_INFO[provider.provider as keyof typeof PROVIDER_INFO]
+            if (!info) return null
+            const Icon = info.icon
+            return (
+              <Card key={provider.provider}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Icon className="size-5" aria-hidden="true" />
+                    {info.name}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <p className={provider.enabled ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}>
+                    {provider.enabled ? "Configured" : "Not configured"}
+                  </p>
+                  <p className="text-muted-foreground">
+                    Set <code>{info.variables}</code> on the server.
+                  </p>
+                  <p className="text-muted-foreground">
+                    Authorize <code>{`BETTER_AUTH_URL${info.callbackPath}`}</code> as the provider
+                    callback URL, replacing the variable with your deployment origin.
+                  </p>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

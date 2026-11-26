@@ -8,116 +8,204 @@ import {
   useEffect,
 } from "react"
 import { z } from "zod"
-import type { MoodCategory } from "@/types/mood"
+import {
+  createMoodEntrySchema,
+  createMoodEntryBaseSchema,
+  isValidMoodSelection,
+} from "@/lib/mood-validation"
+import { isValidDateOnly, todayInTimeZone } from "@/lib/dates"
+import { authClient } from "@/lib/auth-client"
+import { WizardSkeleton } from "@/components/ui/loading-skeleton"
 
-const step1Schema = z.object({
-  category: z.enum(["POSITIVE", "NEUTRAL", "NEGATIVE"]),
-  moodIndex: z.number().min(0).max(18),
-  intensity: z.number().min(1).max(10),
-  date: z.string(),
+function refineWizardMoodSelection(
+  data: { category: unknown; moodIndex: unknown },
+  ctx: z.RefinementCtx
+) {
+  if (data.category === null || data.moodIndex === null) {
+    if (data.category !== null || data.moodIndex !== null) {
+      ctx.addIssue({ code: "custom", message: "Choose a mood", path: ["moodIndex"] })
+    }
+  } else if (!isValidMoodSelection(data.category, data.moodIndex)) {
+    ctx.addIssue({
+      code: "custom",
+      message: "moodIndex must belong to the selected category",
+      path: ["moodIndex"],
+    })
+  }
+}
+
+const wizardDraftSchema = z
+  .object({
+    category: z.enum(["POSITIVE", "NEUTRAL", "NEGATIVE"]).nullable(),
+    moodIndex: z.number().int().min(0).nullable(),
+    intensity: z.number().int().min(1).max(10),
+    localDate: z.string().refine(isValidDateOnly, "Choose a valid date"),
+    activities: z.array(z.string()).max(50),
+    weather: z.string().nullable().optional(),
+    sleepHours: z.number().min(0).max(24).nullable().optional(),
+    sleepQuality: z.string().nullable().optional(),
+    energyLevel: z.number().int().min(1).max(10).nullable().optional(),
+    stressLevel: z.number().int().min(1).max(10).nullable().optional(),
+    reflection1: z.string().max(500).nullable().optional(),
+    reflection2: z.string().max(500).nullable().optional(),
+    reflection3: z.string().max(500).nullable().optional(),
+    reflection4: z.string().max(500).nullable().optional(),
+  })
+  .superRefine(refineWizardMoodSelection)
+
+export const step1Schema = createMoodEntryBaseSchema.pick({
+  category: true,
+  moodIndex: true,
+  intensity: true,
+  localDate: true,
+}).superRefine(refineWizardMoodSelection)
+export const step2Schema = createMoodEntryBaseSchema.pick({
+  activities: true,
+  weather: true,
+  sleepHours: true,
+  sleepQuality: true,
+  energyLevel: true,
+  stressLevel: true,
 })
-
-const step2Schema = z.object({
-  activities: z.array(z.string()).optional(),
-  weather: z.string().optional(),
-  sleepHours: z.number().optional(),
-  sleepQuality: z.string().optional(),
-  energyLevel: z.number().min(1).max(10).optional(),
-  stressLevel: z.number().min(1).max(10).optional(),
+export const step3Schema = createMoodEntryBaseSchema.pick({
+  reflection1: true,
+  reflection2: true,
+  reflection3: true,
+  reflection4: true,
 })
+export const fullSchema = createMoodEntrySchema
 
-const step3Schema = z.object({
-  reflection1: z.string().max(500).optional(),
-  reflection2: z.string().max(500).optional(),
-  reflection3: z.string().max(500).optional(),
-  reflection4: z.string().max(500).optional(),
-})
+export type WizardFormData = z.infer<typeof wizardDraftSchema>
 
-const fullSchema = step1Schema.merge(step2Schema).merge(step3Schema)
-
-type WizardFormData = z.infer<typeof fullSchema>
-
-const defaultFormData: WizardFormData = {
-  category: "NEUTRAL" as MoodCategory,
-  moodIndex: 9,
-  intensity: 5,
-  date: new Date().toISOString().split("T")[0],
-  activities: [],
-  weather: undefined,
-  sleepHours: undefined,
-  sleepQuality: undefined,
-  energyLevel: undefined,
-  stressLevel: undefined,
-  reflection1: undefined,
-  reflection2: undefined,
-  reflection3: undefined,
-  reflection4: undefined,
+function defaultFormData(timezone: string, initialLocalDate?: string): WizardFormData {
+  return {
+    category: null,
+    moodIndex: null,
+    intensity: 5,
+    localDate: isValidDateOnly(initialLocalDate) ? initialLocalDate : todayInTimeZone(timezone),
+    activities: [],
+    weather: null,
+    sleepHours: null,
+    sleepQuality: null,
+    energyLevel: null,
+    stressLevel: null,
+    reflection1: null,
+    reflection2: null,
+    reflection3: null,
+    reflection4: null,
+  }
 }
 
 interface WizardContextType {
   step: number
   setStep: (step: number) => void
   formData: WizardFormData
+  timezone: string
   updateFormData: (data: Partial<WizardFormData>) => void
   resetForm: (data?: WizardFormData) => void
   clearDraft: () => void
 }
 
 const WizardContext = createContext<WizardContextType | null>(null)
+const LEGACY_DRAFT_KEY = "mood-draft"
 
-const DRAFT_KEY = "mood-draft"
+export function moodDraftKey(userId: string): string {
+  return `${LEGACY_DRAFT_KEY}:${userId}`
+}
 
 export function WizardProvider({
   children,
   initialData,
+  initialLocalDate,
+  timezone = "UTC",
 }: {
   children: React.ReactNode
   initialData?: WizardFormData
+  initialLocalDate?: string
+  timezone?: string
 }) {
+  const { data: session } = authClient.useSession()
+  const userId = session?.user.id
+  const requestedLocalDate = isValidDateOnly(initialLocalDate) ? initialLocalDate : undefined
   const [step, setStep] = useState(0)
-  const [formData, setFormData] = useState<WizardFormData>(
-    initialData ?? defaultFormData
-  )
+  const [draft, setDraft] = useState<{ userId: string | null; data: WizardFormData }>(() => ({
+    userId: null,
+    data: defaultFormData(timezone, requestedLocalDate),
+  }))
+  const [hydratedUserId, setHydratedUserId] = useState<string | null>(null)
+  const draftReady = !!userId && hydratedUserId === userId
+  const formData = draft.userId === userId
+    ? draft.data
+    : defaultFormData(timezone, requestedLocalDate)
 
-  const updateFormData = useCallback(
-    (data: Partial<WizardFormData>) => {
-      setFormData((prev) => ({ ...prev, ...data }))
-    },
-    []
-  )
+  const updateFormData = useCallback((data: Partial<WizardFormData>) => {
+    if (!userId) return
+    setDraft((previous) => ({
+      userId,
+      data: {
+        ...(previous.userId === userId
+          ? previous.data
+          : defaultFormData(timezone, requestedLocalDate)),
+        ...data,
+      },
+    }))
+  }, [userId, timezone, requestedLocalDate])
 
   const resetForm = useCallback((data?: WizardFormData) => {
-    setFormData(data ?? defaultFormData)
+    if (!userId) return
+    setDraft({ userId, data: data ?? defaultFormData(timezone, requestedLocalDate) })
     setStep(0)
-  }, [])
+  }, [userId, timezone, requestedLocalDate])
 
   const clearDraft = useCallback(() => {
+    if (!userId) return
     try {
-      localStorage.removeItem(DRAFT_KEY)
+      localStorage.removeItem(moodDraftKey(userId))
+      localStorage.removeItem(LEGACY_DRAFT_KEY)
     } catch {}
-  }, [])
+  }, [userId])
 
   useEffect(() => {
-    if (initialData) return
-    try {
-      const saved = localStorage.getItem(DRAFT_KEY)
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        setFormData((prev) => ({ ...prev, ...parsed }))
+    if (!userId) return
+    let active = true
+
+    void Promise.resolve().then(() => {
+      if (!active) return
+      let nextData = initialData ?? defaultFormData(timezone, requestedLocalDate)
+      try {
+        localStorage.removeItem(LEGACY_DRAFT_KEY)
+        if (!initialData) {
+          const saved = localStorage.getItem(moodDraftKey(userId))
+          if (saved) {
+            const parsed = wizardDraftSchema.safeParse(JSON.parse(saved))
+            if (parsed.success) {
+              nextData = requestedLocalDate
+                ? { ...parsed.data, localDate: requestedLocalDate }
+                : parsed.data
+            }
+          }
+        }
+      } catch {}
+
+      if (active) {
+        setDraft({ userId, data: nextData })
+        setHydratedUserId(userId)
       }
-    } catch {}
-  }, [initialData])
+    })
+
+    return () => { active = false }
+  }, [initialData, requestedLocalDate, timezone, userId])
 
   useEffect(() => {
-    if (initialData) return
-    try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(formData))
-    } catch {}
-  }, [formData, initialData])
+    if (!userId || initialData || !draftReady) return
+    try { localStorage.setItem(moodDraftKey(userId), JSON.stringify(formData)) } catch {}
+  }, [formData, initialData, userId, draftReady])
+
+  if (!userId || !draftReady) return <WizardSkeleton />
 
   return (
     <WizardContext.Provider
-      value={{ step, setStep, formData, updateFormData, resetForm, clearDraft }}
+      value={{ step, setStep, formData, timezone, updateFormData, resetForm, clearDraft }}
     >
       {children}
     </WizardContext.Provider>
@@ -125,10 +213,7 @@ export function WizardProvider({
 }
 
 export function useWizard() {
-  const ctx = useContext(WizardContext)
-  if (!ctx) throw new Error("useWizard must be inside WizardProvider")
-  return ctx
+  const context = useContext(WizardContext)
+  if (!context) throw new Error("useWizard must be inside WizardProvider")
+  return context
 }
-
-export { step1Schema, step2Schema, step3Schema, fullSchema }
-export type { WizardFormData }

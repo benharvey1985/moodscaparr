@@ -1,10 +1,12 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { format } from "date-fns"
+import { Pencil, Trash2 } from "lucide-react"
+import { useState } from "react"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -12,10 +14,9 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { DeleteDialog } from "@/components/delete-dialog"
-import { MOODS, type MoodCategory } from "@/types/mood"
-import type { MoodEntry } from "@/types/mood"
-import { Pencil, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { MOODS, type MoodEntry } from "@/types/mood"
+import { formatLocalDate } from "@/lib/dates"
+import { REFLECTION_PROMPTS } from "@/components/history/reflection-prompts"
 
 interface EntryDetailDialogProps {
   entry: MoodEntry | null
@@ -23,11 +24,17 @@ interface EntryDetailDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-const categoryColors: Record<string, string> = {
-  POSITIVE: "bg-[var(--color-mood-positive-medium)]",
-  NEUTRAL: "bg-[var(--color-mood-neutral-medium)]",
-  NEGATIVE: "bg-[var(--color-mood-negative-medium)]",
-}
+const categoryColors = {
+  POSITIVE: "bg-mood-positive-medium",
+  NEUTRAL: "bg-mood-neutral-medium",
+  NEGATIVE: "bg-mood-negative-medium",
+} as const
+
+const categoryLabels = {
+  POSITIVE: "Positive",
+  NEUTRAL: "Neutral",
+  NEGATIVE: "Negative",
+} as const
 
 export function EntryDetailDialog({ entry, open, onOpenChange }: EntryDetailDialogProps) {
   const router = useRouter()
@@ -35,28 +42,30 @@ export function EntryDetailDialog({ entry, open, onOpenChange }: EntryDetailDial
 
   if (!entry) return null
 
-  const moods = MOODS[entry.category as MoodCategory]
-  const mood = moods?.[entry.moodIndex]
-  const colorStrip = categoryColors[entry.category] ?? "bg-border"
+  const mood = MOODS[entry.category]?.[entry.moodIndex]
+  const colorStrip = categoryColors[entry.category]
+  const dateLabel = entry.localDate
+    ? formatLocalDate(entry.localDate, { weekday: "long", month: "long", day: "numeric", year: "numeric" })
+    : "Date unavailable"
+  const hasReflections = REFLECTION_PROMPTS.some(({ key }) => entry[key])
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md sm:max-w-lg">
-          <div className={`-mx-4 -mt-4 h-1.5 ${colorStrip}`} />
-          <DialogHeader>
+        <DialogContent className="flex max-h-[calc(100dvh-2rem)] max-w-md flex-col overflow-hidden sm:max-w-lg">
+          <div className={`-mx-4 -mt-4 h-1.5 shrink-0 ${colorStrip}`} />
+          <DialogHeader className="shrink-0 pr-8">
             <div className="flex items-center gap-3">
-              <span className="text-3xl">{mood?.emoji ?? "?"}</span>
+              <span className="text-3xl" aria-hidden="true">{mood?.emoji ?? "?"}</span>
               <div>
-                <DialogTitle className="text-lg">{mood?.label ?? "Unknown"}</DialogTitle>
-                <p className="text-sm text-muted-foreground">
-                  {format(new Date(entry.date), "EEEE, MMMM d, yyyy")}
-                </p>
+                <DialogTitle className="text-lg">{mood?.label ?? "Unknown mood"}</DialogTitle>
+                <DialogDescription>{dateLabel}</DialogDescription>
               </div>
             </div>
+            <Badge variant="secondary" className="w-fit">{categoryLabels[entry.category]}</Badge>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="min-h-0 space-y-4 overflow-y-auto pr-1">
             <div>
               <p className="mb-1.5 text-xs font-medium text-muted-foreground">Intensity</p>
               <div className="flex items-center gap-2">
@@ -76,8 +85,8 @@ export function EntryDetailDialog({ entry, open, onOpenChange }: EntryDetailDial
               <div>
                 <p className="mb-1.5 text-xs font-medium text-muted-foreground">Activities</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {entry.activities.map((a) => (
-                    <Badge key={a} variant="secondary">{a}</Badge>
+                  {entry.activities.map((activity) => (
+                    <Badge key={activity} variant="secondary">{activity}</Badge>
                   ))}
                 </div>
               </div>
@@ -93,7 +102,9 @@ export function EntryDetailDialog({ entry, open, onOpenChange }: EntryDetailDial
               {entry.sleepHours != null && (
                 <div>
                   <p className="text-xs text-muted-foreground">Sleep</p>
-                  <p className="font-medium">{entry.sleepHours}h {entry.sleepQuality ? `(${entry.sleepQuality})` : ""}</p>
+                  <p className="font-medium">
+                    {entry.sleepHours}h {entry.sleepQuality ? `(${entry.sleepQuality})` : ""}
+                  </p>
                 </div>
               )}
               {entry.energyLevel != null && (
@@ -110,53 +121,39 @@ export function EntryDetailDialog({ entry, open, onOpenChange }: EntryDetailDial
               )}
             </div>
 
-            {(entry.reflection1 || entry.reflection2 || entry.reflection3 || entry.reflection4) && (
+            {hasReflections && (
               <>
                 <Separator />
-                <div className="max-h-48 space-y-3 overflow-y-auto">
-                  {entry.reflection1 && (
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground">How are you feeling today?</p>
-                      <p className="text-sm">{entry.reflection1}</p>
-                    </div>
-                  )}
-                  {entry.reflection2 && (
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground">What went well?</p>
-                      <p className="text-sm">{entry.reflection2}</p>
-                    </div>
-                  )}
-                  {entry.reflection3 && (
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground">What&apos;s on your mind?</p>
-                      <p className="text-sm">{entry.reflection3}</p>
-                    </div>
-                  )}
-                  {entry.reflection4 && (
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground">Anything else?</p>
-                      <p className="text-sm">{entry.reflection4}</p>
-                    </div>
-                  )}
+                <div className="space-y-3">
+                  {REFLECTION_PROMPTS.map(({ key, label }) => {
+                    const response = entry[key]
+                    if (!response) return null
+                    return (
+                      <div key={key}>
+                        <p className="text-xs font-medium text-muted-foreground">{label}</p>
+                        <p className="mt-1 text-sm leading-relaxed">{response}</p>
+                      </div>
+                    )
+                  })}
                 </div>
               </>
             )}
           </div>
 
-          <div className="-mx-4 -mb-4 flex items-center justify-between rounded-b-xl border-t bg-muted/50 p-4">
+          <div className="-mx-4 -mb-4 flex shrink-0 items-center justify-between gap-2 rounded-b-xl border-t bg-muted/50 p-4">
             <Button
               variant="destructive"
-              size="sm"
+              className="min-h-11"
               onClick={() => setDeleteOpen(true)}
             >
               <Trash2 className="size-3.5" />
               Delete
             </Button>
             <Button
-              size="sm"
+              className="min-h-11"
               onClick={() => {
                 onOpenChange(false)
-                router.push(`/wizard?id=${entry.id}`)
+                router.push(`/wizard?id=${encodeURIComponent(entry.id)}`)
               }}
             >
               <Pencil className="size-3.5" />
@@ -169,9 +166,9 @@ export function EntryDetailDialog({ entry, open, onOpenChange }: EntryDetailDial
       <DeleteDialog
         entryId={entry.id}
         open={deleteOpen}
-        onOpenChange={(open) => {
-          setDeleteOpen(open)
-          if (!open) onOpenChange(false)
+        onOpenChange={(isOpen) => {
+          setDeleteOpen(isOpen)
+          if (!isOpen) onOpenChange(false)
         }}
       />
     </>

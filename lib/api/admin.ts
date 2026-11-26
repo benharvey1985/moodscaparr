@@ -1,3 +1,12 @@
+export interface PasswordResetHealth {
+  configured: boolean
+  status: "healthy" | "degraded" | "not_configured" | "unknown"
+  lastAttemptAt: string | null
+  lastSuccessAt: string | null
+  lastFailureAt: string | null
+  message: string
+}
+
 export interface AdminStats {
   totalUsers: number
   activeUsers: number
@@ -5,6 +14,7 @@ export interface AdminStats {
   avgStreak: number
   registrationTrend: Array<{ month: string; count: number }>
   moodDistribution: { POSITIVE: number; NEUTRAL: number; NEGATIVE: number }
+  passwordResetHealth: PasswordResetHealth
 }
 
 export interface AdminUser {
@@ -62,6 +72,17 @@ export async function fetchAdminUsers(params: {
   return res.json()
 }
 
+async function responseError(res: Response, fallback: string): Promise<Error> {
+  const body = await res.json().catch(() => null)
+  const message =
+    typeof body?.error === "string"
+      ? body.error
+      : typeof body?.message === "string"
+        ? body.message
+        : fallback
+  return new Error(message)
+}
+
 export async function updateUser(
   id: string,
   data: { role?: string; banned?: boolean }
@@ -72,7 +93,7 @@ export async function updateUser(
     credentials: "include",
     body: JSON.stringify(data),
   })
-  if (!res.ok) throw new Error("Failed to update user")
+  if (!res.ok) throw await responseError(res, "Failed to update user")
 }
 
 export async function deleteUser(id: string): Promise<void> {
@@ -80,28 +101,18 @@ export async function deleteUser(id: string): Promise<void> {
     method: "DELETE",
     credentials: "include",
   })
-  if (!res.ok) throw new Error("Failed to delete user")
+  if (!res.ok) throw await responseError(res, "Failed to delete user")
 }
 
 export async function fetchSSOConfig(): Promise<SsoProviderConfig[]> {
   const res = await fetch("/api/admin/sso", { credentials: "include" })
-  if (!res.ok) throw new Error("Failed to fetch SSO config")
+  if (!res.ok) throw await responseError(res, "Failed to fetch SSO config")
   return res.json()
-}
-
-export async function toggleSSO(provider: string, enabled: boolean): Promise<void> {
-  const res = await fetch("/api/admin/sso", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ provider, enabled }),
-  })
-  if (!res.ok) throw new Error("Failed to update SSO config")
 }
 
 export async function fetchInviteCodes(): Promise<InviteCodeData[]> {
   const res = await fetch("/api/admin/invite-codes", { credentials: "include" })
-  if (!res.ok) throw new Error("Failed to fetch invite codes")
+  if (!res.ok) throw await responseError(res, "Failed to fetch invite codes")
   return res.json()
 }
 
@@ -115,7 +126,7 @@ export async function generateInviteCode(data: {
     credentials: "include",
     body: JSON.stringify(data),
   })
-  if (!res.ok) throw new Error("Failed to generate invite code")
+  if (!res.ok) throw await responseError(res, "Failed to generate invite code")
   return res.json()
 }
 
@@ -124,7 +135,7 @@ export async function revokeInviteCode(id: string): Promise<void> {
     method: "DELETE",
     credentials: "include",
   })
-  if (!res.ok) throw new Error("Failed to revoke invite code")
+  if (!res.ok) throw await responseError(res, "Failed to revoke invite code")
 }
 
 export interface AppSettingData {
@@ -134,7 +145,7 @@ export interface AppSettingData {
 
 export async function fetchSetting(key: string): Promise<AppSettingData> {
   const res = await fetch(`/api/admin/settings/${key}`, { credentials: "include" })
-  if (!res.ok) throw new Error("Failed to fetch setting")
+  if (!res.ok) throw await responseError(res, "Failed to fetch setting")
   return res.json()
 }
 
@@ -145,6 +156,6 @@ export async function updateSetting(key: string, value: string): Promise<AppSett
     credentials: "include",
     body: JSON.stringify({ value }),
   })
-  if (!res.ok) throw new Error("Failed to update setting")
+  if (!res.ok) throw await responseError(res, "Failed to update setting")
   return res.json()
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,8 @@ const steps = [
   },
 ]
 
+type CompletionAction = "skip" | "finish"
+
 interface OnboardingTourProps {
   isOpen: boolean
   onComplete: () => void
@@ -37,43 +39,76 @@ interface OnboardingTourProps {
 
 function OnboardingTour({ isOpen, onComplete, onSkip }: OnboardingTourProps) {
   const [currentStep, setCurrentStep] = useState(0)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [pendingAction, setPendingAction] = useState<CompletionAction | null>(null)
+  const savingRef = useRef(false)
 
-  const handleNext = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep((prev) => prev + 1)
-    } else {
-      handleFinish()
-    }
-  }
+  async function persistCompletion(action: CompletionAction) {
+    if (savingRef.current) return
+    savingRef.current = true
+    setSaving(true)
+    setError(null)
+    setPendingAction(null)
 
-  const handleBack = () => {
-    if (currentStep > 0) {
-      setCurrentStep((prev) => prev - 1)
-    }
-  }
-
-  const handleFinish = async () => {
     try {
-      await fetch("/api/user/onboarding-complete", { method: "POST" })
+      const response = await fetch("/api/user/onboarding-complete", {
+        method: "POST",
+        credentials: "include",
+      })
+      if (!response.ok) throw new Error("Could not save your tour progress")
+
+      setCurrentStep(0)
+      if (action === "finish") onComplete()
+      else onSkip()
     } catch {
-      // Tour still completes
+      setPendingAction(action)
+      setError("Your tour dismissal could not be saved. Check your connection and retry.")
+    } finally {
+      savingRef.current = false
+      setSaving(false)
     }
-    onComplete()
+  }
+
+  function handleNext() {
+    if (saving || pendingAction) return
+    if (currentStep < steps.length - 1) {
+      setCurrentStep((previous) => previous + 1)
+    } else {
+      void persistCompletion("finish")
+    }
+  }
+
+  function handleBack() {
+    if (saving || pendingAction) return
+    if (currentStep > 0) setCurrentStep((previous) => previous - 1)
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onSkip() }}>
-      <DialogContent className="sm:max-w-sm" showCloseButton={false}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open && !saving) void persistCompletion("skip")
+      }}
+    >
+      <DialogContent className="sm:max-w-sm" showCloseButton={false} aria-busy={saving}>
         <DialogHeader>
           <DialogTitle className="sr-only">Onboarding Tour</DialogTitle>
         </DialogHeader>
-        <button
-          onClick={onSkip}
-          className="absolute right-3 top-3 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100"
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label="Skip tour"
+          disabled={saving}
+          onClick={() => void persistCompletion("skip")}
+          className="absolute top-2 right-2"
         >
-          <X className="size-4" />
-          <span className="sr-only">Skip</span>
-        </button>
+          <X className="size-4" aria-hidden="true" />
+        </Button>
+        <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+          Step {currentStep + 1} of {steps.length}: {steps[currentStep].title}. {steps[currentStep].description}
+        </p>
         <div className="relative py-6">
           {steps.map((step, index) => (
             <TourStep
@@ -87,26 +122,41 @@ function OnboardingTour({ isOpen, onComplete, onSkip }: OnboardingTourProps) {
             />
           ))}
         </div>
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center justify-center gap-2" aria-hidden="true">
           {steps.map((_, index) => (
             <div
               key={index}
-              className={`size-2 rounded-full transition-colors ${
+              className={`size-2 rounded-full transition-colors motion-reduce:transition-none ${
                 index === currentStep ? "bg-primary" : "bg-muted-foreground/30"
               }`}
             />
           ))}
         </div>
+        {error && (
+          <div role="alert" className="space-y-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm">
+            <p className="text-destructive">{error}</p>
+            {pendingAction && (
+              <Button type="button" variant="outline" size="sm" onClick={() => void persistCompletion(pendingAction)}>
+                Retry
+              </Button>
+            )}
+          </div>
+        )}
         <div className="mt-4 flex items-center justify-between">
           <Button
+            type="button"
             variant="ghost"
             onClick={handleBack}
-            disabled={currentStep === 0}
+            disabled={currentStep === 0 || saving || pendingAction !== null}
           >
             Back
           </Button>
-          <Button onClick={handleNext}>
-            {currentStep === steps.length - 1 ? "Finish" : "Next"}
+          <Button
+            type="button"
+            onClick={handleNext}
+            disabled={saving || pendingAction !== null}
+          >
+            {saving ? "Saving..." : currentStep === steps.length - 1 ? "Finish" : "Next"}
           </Button>
         </div>
       </DialogContent>

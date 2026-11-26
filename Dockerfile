@@ -43,7 +43,6 @@ COPY --from=deps /app/node_modules /app/node_modules
 COPY --from=builder /app/.next/standalone /app
 COPY --from=builder /app/.next/static /app/.next/static
 COPY --from=builder /app/prisma /app/prisma
-COPY --from=builder /app/node_modules/.prisma /app/node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma /app/node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma /app/node_modules/prisma
 COPY --from=builder /app/prisma.config.ts /app/prisma.config.ts
@@ -52,6 +51,8 @@ COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 ENV NODE_ENV=production
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
 
 USER node
 

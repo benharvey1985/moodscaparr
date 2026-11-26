@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useAdminMutations } from "@/hooks/use-admin"
+import { authClient } from "@/lib/auth-client"
 import {
   Dialog,
   DialogContent,
@@ -24,6 +25,13 @@ import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/components/ui/toaster"
 import type { AdminUser } from "@/lib/api/admin"
 
+function mutationErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message && error.message !== "fetch failed") {
+    return error.message
+  }
+  return `${fallback} Check your connection and retry.`
+}
+
 export function UserDetailDialog({
   user,
   open,
@@ -34,28 +42,38 @@ export function UserDetailDialog({
   onOpenChange: (open: boolean) => void
 }) {
   const { addToast } = useToast()
+  const { data: session } = authClient.useSession()
   const { updateUser, deleteUser } = useAdminMutations()
   const [suspendConfirmOpen, setSuspendConfirmOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [pendingRole, setPendingRole] = useState<"admin" | "user" | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const mutationPending = updateUser.isPending || deleteUser.isPending
+  const isSelf = user?.id === session?.user.id
 
-  async function handleToggleRole() {
-    if (!user) return
+  function changeOpen(nextOpen: boolean) {
+    if (!mutationPending) onOpenChange(nextOpen)
+  }
+
+  async function handleRoleChange() {
+    if (!user || !pendingRole || mutationPending) return
+    setActionError(null)
     try {
-      await updateUser.mutateAsync({
-        id: user.id,
-        data: { role: user.role === "admin" ? "user" : "admin" },
-      })
+      await updateUser.mutateAsync({ id: user.id, data: { role: pendingRole } })
       addToast({
-        message: `User ${user.role === "admin" ? "demoted" : "promoted"}`,
+        message: `User ${pendingRole === "admin" ? "promoted" : "demoted"}`,
         variant: "success",
       })
-    } catch {
-      addToast({ message: "Failed to update user", variant: "error" })
+      setPendingRole(null)
+    } catch (error) {
+      setActionError(mutationErrorMessage(error, "Failed to update role."))
+      addToast({ message: "Failed to update role", variant: "error" })
     }
   }
 
   async function handleToggleBan() {
-    if (!user) return
+    if (!user || mutationPending) return
+    setActionError(null)
     try {
       await updateUser.mutateAsync({
         id: user.id,
@@ -66,28 +84,29 @@ export function UserDetailDialog({
         variant: "success",
       })
       setSuspendConfirmOpen(false)
-    } catch {
-      addToast({ message: "Failed to update user", variant: "error" })
-      setSuspendConfirmOpen(false)
+    } catch (error) {
+      setActionError(mutationErrorMessage(error, "Failed to update account status."))
+      addToast({ message: "Failed to update account status", variant: "error" })
     }
   }
 
   async function handleDelete() {
-    if (!user) return
+    if (!user || mutationPending) return
+    setActionError(null)
     try {
       await deleteUser.mutateAsync(user.id)
       addToast({ message: "User deleted", variant: "success" })
       setDeleteConfirmOpen(false)
       onOpenChange(false)
-    } catch {
+    } catch (error) {
+      setActionError(mutationErrorMessage(error, "Failed to delete user."))
       addToast({ message: "Failed to delete user", variant: "error" })
-      setDeleteConfirmOpen(false)
     }
   }
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={changeOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{user?.name || "User"}</DialogTitle>
@@ -129,21 +148,48 @@ export function UserDetailDialog({
                 </div>
               </div>
 
+              {actionError && (
+                <p role="alert" className="text-sm text-destructive">
+                  {actionError}
+                </p>
+              )}
+              {isSelf && (
+                <p className="text-xs text-muted-foreground">
+                  You cannot demote or delete your own account.
+                </p>
+              )}
+
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={handleToggleRole}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={mutationPending || (isSelf && user.role === "admin")}
+                  onClick={() => {
+                    setActionError(null)
+                    setPendingRole(user.role === "admin" ? "user" : "admin")
+                  }}
+                >
                   {user.role === "admin" ? "Demote to User" : "Promote to Admin"}
                 </Button>
                 <Button
                   variant={user.banned ? "outline" : "secondary"}
                   size="sm"
-                  onClick={() => setSuspendConfirmOpen(true)}
+                  disabled={mutationPending}
+                  onClick={() => {
+                    setActionError(null)
+                    setSuspendConfirmOpen(true)
+                  }}
                 >
                   {user.banned ? "Unsuspend" : "Suspend"}
                 </Button>
                 <Button
                   variant="destructive"
                   size="sm"
-                  onClick={() => setDeleteConfirmOpen(true)}
+                  disabled={mutationPending || isSelf}
+                  onClick={() => {
+                    setActionError(null)
+                    setDeleteConfirmOpen(true)
+                  }}
                 >
                   Delete
                 </Button>
@@ -155,7 +201,47 @@ export function UserDetailDialog({
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={suspendConfirmOpen} onOpenChange={setSuspendConfirmOpen}>
+      <AlertDialog
+        open={pendingRole !== null}
+        onOpenChange={(nextOpen) => {
+          if (!mutationPending && !nextOpen) setPendingRole(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingRole === "admin" ? "Promote to Administrator" : "Demote to User"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingRole === "admin"
+                ? `Grant ${user?.name || user?.email || "this user"} full administrator access?`
+                : `Remove administrator access from ${user?.name || user?.email || "this user"}?`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {actionError && (
+            <p role="alert" className="text-sm text-destructive">
+              {actionError}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={updateUser.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant={pendingRole === "user" ? "destructive" : "default"}
+              disabled={updateUser.isPending}
+              onClick={() => void handleRoleChange()}
+            >
+              {updateUser.isPending ? "Saving..." : pendingRole === "admin" ? "Promote" : "Demote"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={suspendConfirmOpen}
+        onOpenChange={(nextOpen) => {
+          if (!mutationPending) setSuspendConfirmOpen(nextOpen)
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
@@ -164,15 +250,20 @@ export function UserDetailDialog({
             <AlertDialogDescription>
               {user?.banned
                 ? "Are you sure you want to unsuspend this user? They will regain access to their account."
-                : "Are you sure you want to suspend this user? They will be unable to access their account."}
+                : "Are you sure you want to suspend this user? Their sessions will be revoked immediately."}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {actionError && (
+            <p role="alert" className="text-sm text-destructive">
+              {actionError}
+            </p>
+          )}
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={updateUser.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              variant="destructive"
-              onClick={handleToggleBan}
+              variant={user?.banned ? "default" : "destructive"}
               disabled={updateUser.isPending}
+              onClick={() => void handleToggleBan()}
             >
               {updateUser.isPending
                 ? "Saving..."
@@ -184,7 +275,12 @@ export function UserDetailDialog({
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+      <AlertDialog
+        open={deleteConfirmOpen}
+        onOpenChange={(nextOpen) => {
+          if (!mutationPending) setDeleteConfirmOpen(nextOpen)
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete User</AlertDialogTitle>
@@ -193,12 +289,17 @@ export function UserDetailDialog({
               cannot be undone. All of their data will be removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {actionError && (
+            <p role="alert" className="text-sm text-destructive">
+              {actionError}
+            </p>
+          )}
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteUser.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              onClick={handleDelete}
               disabled={deleteUser.isPending}
+              onClick={() => void handleDelete()}
             >
               {deleteUser.isPending ? "Deleting..." : "Delete"}
             </AlertDialogAction>

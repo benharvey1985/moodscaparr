@@ -39,38 +39,52 @@ interface AchievementCardProps {
 export function AchievementCard({ achievement }: AchievementCardProps) {
   const { definition, isUnlocked, progress, maxProgress } = achievement
   const colors = categoryColors[definition.category] ?? categoryColors.milestone
-  const percentage = Math.round((progress / maxProgress) * 100)
+  const safeMax = Math.max(1, maxProgress)
+  const currentProgress = Math.min(Math.max(progress, 0), safeMax)
+  const percentage = Math.round((currentProgress / safeMax) * 100)
 
   return (
     <Card
       className={cn(
-        "flex flex-col gap-2 p-4 transition-all",
-        isUnlocked ? "opacity-100 shadow-sm" : "opacity-60",
+        "flex flex-col gap-2 p-4 transition-all motion-reduce:transition-none",
+        isUnlocked ? "shadow-sm" : "border-border",
         isUnlocked && colors.border,
       )}
     >
       <div className="flex items-center justify-between">
-        <span className="text-2xl">{definition.icon}</span>
-        {isUnlocked && (
-          <Badge variant="default" className="bg-green-600 text-white text-xs">
-            Unlocked!
+        <span className={cn("text-2xl", !isUnlocked && "grayscale")} aria-hidden="true">
+          {definition.icon}
+        </span>
+        {isUnlocked ? (
+          <Badge variant="default" className="bg-mood-positive-medium text-xs text-white">
+            Unlocked
           </Badge>
+        ) : (
+          <Badge variant="secondary" className="text-xs">Locked</Badge>
         )}
       </div>
       <div>
-        <h3 className={cn("text-sm font-semibold", isUnlocked ? colors.text : "text-muted-foreground")}>
+        <h3 className={cn("text-sm font-semibold", isUnlocked ? colors.text : "text-foreground")}>
           {definition.title}
         </h3>
-        <p className="text-xs text-muted-foreground mt-0.5">{definition.description}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">{definition.description}</p>
       </div>
       <div className="mt-auto space-y-1">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>{progress} / {maxProgress}</span>
+          <span>{currentProgress} / {safeMax}</span>
           <span>{percentage}%</span>
         </div>
-        <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+        <div
+          role="progressbar"
+          aria-label={`${definition.title} progress`}
+          aria-valuemin={0}
+          aria-valuemax={safeMax}
+          aria-valuenow={currentProgress}
+          aria-valuetext={`${currentProgress} of ${safeMax}`}
+          className="h-2 w-full overflow-hidden rounded-full bg-muted"
+        >
           <div
-            className={cn("h-full rounded-full transition-all duration-500", colors.bar)}
+            className={cn("h-full rounded-full transition-all duration-500 motion-reduce:transition-none", colors.bar)}
             style={{ width: `${percentage}%` }}
           />
         </div>

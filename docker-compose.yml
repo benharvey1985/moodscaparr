@@ -17,6 +17,8 @@ services:
 
   db:
     image: postgres:16-alpine
+    ports:
+      - "5434:5432"
     environment:
       POSTGRES_USER: moodscaparr
       POSTGRES_PASSWORD: change-me-in-production

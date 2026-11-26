@@ -8,6 +8,24 @@ export const profileKeys = {
   profile: ["profile"] as const,
 }
 
+const dateDependentQueries = [
+  ["mood-entries"],
+  ["history"],
+  ["stats"],
+  ["streak"],
+  ["analytics"],
+  ["calendar"],
+  ["achievements"],
+] as const
+
+function invalidateDateDependentQueries(queryClient: ReturnType<typeof useQueryClient>) {
+  return Promise.all(
+    dateDependentQueries.map((queryKey) =>
+      queryClient.invalidateQueries({ queryKey })
+    )
+  )
+}
+
 export function useProfile() {
   return useQuery({
     queryKey: profileKeys.profile,
@@ -20,16 +38,17 @@ export function useUpdateProfile() {
 
   return useMutation({
     mutationFn: (data: UpdateProfileInput) => updateProfile(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: profileKeys.profile })
+    onSuccess: async (data, variables) => {
+      queryClient.setQueryData(profileKeys.profile, data)
+      if (variables.timezone !== undefined) {
+        await invalidateDateDependentQueries(queryClient)
+      }
     },
   })
 }
 
 export function useExportData() {
-  return useMutation({
-    mutationFn: exportData,
-  })
+  return useMutation({ mutationFn: exportData })
 }
 
 export function useImportData() {
@@ -37,8 +56,8 @@ export function useImportData() {
 
   return useMutation({
     mutationFn: (file: File) => importData(file),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["mood-entries"] })
+    onSuccess: async () => {
+      await invalidateDateDependentQueries(queryClient)
     },
   })
 }

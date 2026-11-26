@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const rl = feedbackLimiter.check(`feedback:${session.user.id}`)
+  const rl = await feedbackLimiter.check(`feedback:${session.user.id}`)
   if (!rl.allowed) {
     return NextResponse.json({ error: "Too many requests", retryIn: rl.resetIn }, { status: 429 })
   }
@@ -60,10 +60,19 @@ export async function POST(request: Request) {
       labels,
     })
     const url = `https://github.com/${repo}/issues/new?${params.toString()}`
-    console.log(`[Feedback] Issue URL: ${url}`)
-    return NextResponse.json({ url, id, message: "Feedback submitted" })
+    return NextResponse.json({
+      url,
+      id,
+      message: "GitHub issue draft prepared. Open the URL and submit it on GitHub to create an issue.",
+    })
   }
 
-  console.log(`[Feedback] No GITHUB_REPO configured. Feedback data:`, { type, title: sanitizedTitle })
-  return NextResponse.json({ url: null, id, message: "Feedback recorded (GitHub not configured)" })
+  return NextResponse.json(
+    {
+      error: "Feedback delivery is not configured. Set NEXT_PUBLIC_GITHUB_REPO and retry.",
+      code: "FEEDBACK_DELIVERY_NOT_CONFIGURED",
+      retryable: true,
+    },
+    { status: 503 }
+  )
 }

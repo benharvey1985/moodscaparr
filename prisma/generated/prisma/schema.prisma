@@ -84,6 +84,7 @@ model MoodEntry {
   moodIndex    Int
   intensity    Int
   date         DateTime
+  localDate    String?
   activities   String[]
   weather      String?
   sleepHours   Float?
@@ -100,6 +101,7 @@ model MoodEntry {
   user user @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, date])
+  @@index([userId, localDate])
   @@index([userId, category])
 }
 
@@ -138,10 +140,19 @@ model AppSetting {
 }
 
 model InviteConsumption {
-  id        String   @id @default(cuid())
-  email     String   @unique
+  id        String    @id @default(cuid())
+  email     String    @unique
   code      String
-  createdAt DateTime @default(now())
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model ApiRateLimit {
+  key     String @id
+  count   Int
+  resetAt BigInt
+
+  @@index([resetAt])
 }
 
 model Achievement {

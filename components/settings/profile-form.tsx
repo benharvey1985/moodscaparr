@@ -1,60 +1,60 @@
 "use client"
 
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useProfile, useUpdateProfile } from "@/hooks/use-profile"
+import { isValidTimeZone } from "@/lib/dates"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useEffect } from "react"
 import { useToast } from "@/components/ui/toaster"
 
 const COUNTRIES = [
-  { code: "US", name: "United States", tz: "America/New_York", fmt: "MM/DD/YYYY" },
-  { code: "GB", name: "United Kingdom", tz: "Europe/London", fmt: "DD/MM/YYYY" },
-  { code: "CA", name: "Canada", tz: "America/Toronto", fmt: "MM/DD/YYYY" },
-  { code: "AU", name: "Australia", tz: "Australia/Sydney", fmt: "DD/MM/YYYY" },
-  { code: "DE", name: "Germany", tz: "Europe/Berlin", fmt: "DD/MM/YYYY" },
-  { code: "FR", name: "France", tz: "Europe/Paris", fmt: "DD/MM/YYYY" },
-  { code: "JP", name: "Japan", tz: "Asia/Tokyo", fmt: "YYYY/MM/DD" },
-  { code: "BR", name: "Brazil", tz: "America/Sao_Paulo", fmt: "DD/MM/YYYY" },
-  { code: "IN", name: "India", tz: "Asia/Kolkata", fmt: "DD/MM/YYYY" },
-  { code: "NL", name: "Netherlands", tz: "Europe/Amsterdam", fmt: "DD/MM/YYYY" },
-  { code: "ES", name: "Spain", tz: "Europe/Madrid", fmt: "DD/MM/YYYY" },
-  { code: "IT", name: "Italy", tz: "Europe/Rome", fmt: "DD/MM/YYYY" },
-  { code: "SE", name: "Sweden", tz: "Europe/Stockholm", fmt: "DD/MM/YYYY" },
-  { code: "NO", name: "Norway", tz: "Europe/Oslo", fmt: "DD/MM/YYYY" },
-  { code: "DK", name: "Denmark", tz: "Europe/Copenhagen", fmt: "DD/MM/YYYY" },
-  { code: "NZ", name: "New Zealand", tz: "Pacific/Auckland", fmt: "DD/MM/YYYY" },
-  { code: "SG", name: "Singapore", tz: "Asia/Singapore", fmt: "DD/MM/YYYY" },
-  { code: "KR", name: "South Korea", tz: "Asia/Seoul", fmt: "YYYY/MM/DD" },
-  { code: "ZA", name: "South Africa", tz: "Africa/Johannesburg", fmt: "DD/MM/YYYY" },
-  { code: "MX", name: "Mexico", tz: "America/Mexico_City", fmt: "DD/MM/YYYY" },
+  { code: "US", name: "United States", tz: "America/New_York" },
+  { code: "GB", name: "United Kingdom", tz: "Europe/London" },
+  { code: "CA", name: "Canada", tz: "America/Toronto" },
+  { code: "AU", name: "Australia", tz: "Australia/Sydney" },
+  { code: "DE", name: "Germany", tz: "Europe/Berlin" },
+  { code: "FR", name: "France", tz: "Europe/Paris" },
+  { code: "JP", name: "Japan", tz: "Asia/Tokyo" },
+  { code: "BR", name: "Brazil", tz: "America/Sao_Paulo" },
+  { code: "IN", name: "India", tz: "Asia/Kolkata" },
+  { code: "NL", name: "Netherlands", tz: "Europe/Amsterdam" },
+  { code: "ES", name: "Spain", tz: "Europe/Madrid" },
+  { code: "IT", name: "Italy", tz: "Europe/Rome" },
+  { code: "SE", name: "Sweden", tz: "Europe/Stockholm" },
+  { code: "NO", name: "Norway", tz: "Europe/Oslo" },
+  { code: "DK", name: "Denmark", tz: "Europe/Copenhagen" },
+  { code: "NZ", name: "New Zealand", tz: "Pacific/Auckland" },
+  { code: "SG", name: "Singapore", tz: "Asia/Singapore" },
+  { code: "KR", name: "South Korea", tz: "Asia/Seoul" },
+  { code: "ZA", name: "South Africa", tz: "Africa/Johannesburg" },
+  { code: "MX", name: "Mexico", tz: "America/Mexico_City" },
 ]
 
 function getTimezones(): string[] {
   try {
     return Intl.supportedValuesOf("timeZone")
   } catch {
-    return COUNTRIES.map((c) => c.tz).filter((v, i, a) => a.indexOf(v) === i)
+    return COUNTRIES.map((country) => country.tz)
   }
 }
 
-const TIMEZONES = getTimezones()
+const TIMEZONES = Array.from(new Set(["UTC", ...getTimezones()]))
 
 const schema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   country: z.string().max(100).optional(),
-  timezone: z.string().max(64),
+  timezone: z.string().refine(isValidTimeZone, "Choose a valid IANA timezone"),
   streakGoal: z.number().int().min(1).max(365),
 })
 
 type FormData = z.infer<typeof schema>
 
 export function ProfileForm() {
-  const { data, isLoading } = useProfile()
+  const { data, isLoading, isError, error, refetch, isFetching } = useProfile()
   const updateProfile = useUpdateProfile()
   const { addToast } = useToast()
 
@@ -62,7 +62,7 @@ export function ProfileForm() {
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors, isDirty, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -76,16 +76,17 @@ export function ProfileForm() {
       : undefined,
   })
 
-  const selectedCountry = watch("country")
+  const selectedTimezone = useWatch({ control, name: "timezone" }) ?? ""
+  const countryRegistration = register("country")
+  const timezoneOptions = TIMEZONES.includes(selectedTimezone)
+    ? TIMEZONES
+    : [...TIMEZONES, selectedTimezone].filter(Boolean)
 
-  useEffect(() => {
-    if (selectedCountry) {
-      const country = COUNTRIES.find((c) => c.code === selectedCountry)
-      if (country) {
-        setValue("timezone", country.tz)
-      }
-    }
-  }, [selectedCountry, setValue])
+  function handleCountryChange(event: React.ChangeEvent<HTMLSelectElement>) {
+    countryRegistration.onChange(event)
+    const country = COUNTRIES.find((item) => item.code === event.target.value)
+    if (country) setValue("timezone", country.tz, { shouldDirty: true })
+  }
 
   async function onSubmit(formData: FormData) {
     try {
@@ -96,12 +97,34 @@ export function ProfileForm() {
         streakGoal: formData.streakGoal,
       })
       addToast({ message: "Profile updated", variant: "success" })
-    } catch {
-      addToast({ message: "Failed to update profile", variant: "error" })
+    } catch (updateError) {
+      addToast({
+        message: updateError instanceof Error ? updateError.message : "Failed to update profile",
+        variant: "error",
+      })
     }
   }
 
-  if (isLoading) {
+  if (isError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Profile</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-center">
+          <p className="text-sm font-medium text-destructive">Couldn&apos;t load your profile</p>
+          <p className="text-xs text-muted-foreground">
+            {error?.message || "Your saved settings are unavailable."}
+          </p>
+          <Button variant="outline" onClick={() => refetch()} disabled={isFetching}>
+            {isFetching ? "Retrying..." : "Retry"}
+          </Button>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (isLoading || !data) {
     return (
       <Card>
         <CardHeader>
@@ -122,46 +145,52 @@ export function ProfileForm() {
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Name</label>
-            <Input {...register("name")} />
+            <label htmlFor="profile-name" className="text-sm font-medium">Name</label>
+            <Input id="profile-name" {...register("name")} aria-invalid={!!errors.name} />
             {errors.name && (
-              <p className="text-xs text-destructive">{errors.name.message}</p>
+              <p id="profile-name-error" className="text-xs text-destructive">{errors.name.message}</p>
             )}
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Country</label>
-            <Select {...register("country")}>
-              <option value="">Select a country...</option>
-              {COUNTRIES.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.name}
-                </option>
-              ))}
-            </Select>
+            <label htmlFor="profile-country" className="text-sm font-medium">Country</label>
+            <Select id="profile-country" {...countryRegistration} onChange={handleCountryChange} />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Timezone</label>
-            <Select {...register("timezone")}>
-              {TIMEZONES.map((tz) => (
-                <option key={tz} value={tz}>
-                  {tz}
-                </option>
+            <label htmlFor="profile-timezone" className="text-sm font-medium">Timezone</label>
+            <Select
+              id="profile-timezone"
+              {...register("timezone")}
+              aria-invalid={!!errors.timezone}
+              aria-describedby={errors.timezone ? "profile-timezone-error" : undefined}
+            >
+              {timezoneOptions.map((timezone) => (
+                <option key={timezone} value={timezone}>{timezone}</option>
               ))}
             </Select>
+            {errors.timezone && (
+              <p id="profile-timezone-error" className="text-xs text-destructive">{errors.timezone.message}</p>
+            )}
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Streak Goal (days)</label>
-            <Input type="number" min={1} max={365} {...register("streakGoal", { valueAsNumber: true })} />
+            <label htmlFor="profile-streak-goal" className="text-sm font-medium">Streak Goal (days)</label>
+            <Input
+              id="profile-streak-goal"
+              type="number"
+              min={1}
+              max={365}
+              {...register("streakGoal", { valueAsNumber: true })}
+              aria-invalid={!!errors.streakGoal}
+            />
             {errors.streakGoal && (
               <p className="text-xs text-destructive">{errors.streakGoal.message}</p>
             )}
           </div>
 
-          <Button type="submit" disabled={!isDirty || isSubmitting}>
-            {isSubmitting ? "Saving..." : "Save Changes"}
+          <Button type="submit" disabled={!isDirty || isSubmitting || updateProfile.isPending}>
+            {isSubmitting || updateProfile.isPending ? "Saving..." : "Save Changes"}
           </Button>
         </form>
       </CardContent>
